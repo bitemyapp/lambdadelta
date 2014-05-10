@@ -1,14 +1,14 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts, OverloadedStrings #-}
 
 module Main where
 
 import Browse.User
 import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Trans.Control (MonadBaseControl)
 import Control.Monad.Trans.Reader (runReaderT)
-import Data.Maybe
-import Data.Text (Text)
 import Database (migrateAll)
-import Database.Persist.Sqlite
+import Database.Persist.Sql (ConnectionPool, SqlPersistM, runSqlPersistMPool, runMigration)
+import Database.Persist.Sqlite (withSqlitePool)
 import Network.HTTP.Types.Status
 import Network.Wai
 import Network.Wai.Handler.Warp
@@ -22,16 +22,19 @@ import Web.Routes.Site
 -- Todo: have different execution modes (run server, migrate database, etc)
 main :: IO ()
 main = do putStrLn $ "Starting Λδ on port " ++ show (settingsPort defaultSettings)
-          withDB $ do
-            runMigration migrateAll
-            liftIO $ runSettings defaultSettings lambdadelta
+          withDB $ runMigration migrateAll
+          withPool (\pool -> runSettings defaultSettings $ lambdadelta pool)
 
 
 -- |Run a database function
+withDB :: (MonadIO m, MonadBaseControl IO m) => SqlPersistM a -> m a
+withDB f = withPool (\pool -> liftIO $ runSqlPersistMPool f pool)
+
+-- |Run a database function which takes a connection pool
 -- Todo: don't hard-code the database
 -- Todo: size of database pool configurable
-withDB :: SqlPersistM () -> IO ()
-withDB f = withSqlitePool ":memory:" 10 $ \pool -> runSqlPersistMPool f pool
+withPool :: (MonadIO m, MonadBaseControl IO m) => (ConnectionPool -> m a) -> m a
+withPool f = withSqlitePool "test.sqlite" 10 f
 
 -- |lambdadelta, or Λδ, is the actual WAI application. It takes a
 -- request, handles it, and produces a response. This just consists of
@@ -39,15 +42,16 @@ withDB f = withSqlitePool ":memory:" 10 $ \pool -> runSqlPersistMPool f pool
 -- failing with a 404 if nothing matches.
 -- Todo: get the proper application root
 -- Todo: handle static files
-lambdadelta :: Application
-lambdadelta req = case handle req of
-                    Left _ -> return $ responseLBS notFound404 [] ""
-                    Right resp -> resp
+lambdadelta :: ConnectionPool -> Application
+lambdadelta pool req = case handle req of
+                         Left _ -> return $ responseLBS notFound404 [] ""
+                         Right resp -> runSqlPersistMPool resp pool
     where handle req = runSite "/" (mkSitePI $ flip routeRequest req) $ pathInfo req
 
 -- |The main router
 -- Todo: would web-routes-wai be useful?
-routeRequest :: MonadIO m => MkUrl -> Request -> Sitemap -> m Response
+-- Todo: use SqlPersistT?
+routeRequest :: MkUrl -> Request -> Sitemap -> SqlPersistM Response
 routeRequest mkurl req Index           = runReaderT index (mkurl, req)
 routeRequest mkurl req (Board b p)     = runReaderT (board b p) (mkurl, req)
 routeRequest mkurl req (Thread b t)    = runReaderT (thread b t) (mkurl, req)
