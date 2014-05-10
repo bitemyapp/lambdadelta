@@ -3,6 +3,7 @@
 module Main where
 
 import Browse.User
+import Control.Monad (void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Control (MonadBaseControl)
 import Control.Monad.Trans.Reader (runReaderT)
@@ -15,6 +16,8 @@ import Network.HTTP.Types.Status
 import Network.Wai
 import Network.Wai.Handler.Warp
 import Routes
+import System.Environment (getArgs)
+import System.Exit (exitFailure)
 import Types
 import Web.Routes.PathInfo
 import Web.Routes.Site
@@ -22,16 +25,34 @@ import Web.Routes.Site
 import qualified Database as D
 
 -- |Fire up the server on the default port and just listen forever for requests.
--- Todo: have the host and posrt be parameters
--- Todo: have different execution modes (run server, migrate database, etc)
--- Todo: Don't insert a test board
 main :: IO ()
-main = do putStrLn $ "Starting Λδ on port " ++ show (settingsPort defaultSettings)
-          let connstr = "test.sqlite"
-          withDB connstr $ do runMigration migrateAll
-                              insert $ D.Board "b" "Random" "Not like 4chan"
-          withPool connstr (\pool -> runSettings defaultSettings $ lambdadelta pool)
+main = do args <- getArgs
+          case args of
+            ("runserver":_) -> runserver
+            ("migrate":_)   -> migrate
+            ("populate":_)  -> populate
+            _ -> putStrLn "Invalid argument" >> exitFailure
 
+-- |Run the server
+-- Todo: have the host and port be parameters (config file?)
+-- Todo: have the connection string be a parameter (config file?)
+runserver :: IO ()
+runserver = do putStrLn $ "Starting Λδ on port " ++ show (settingsPort defaultSettings)
+               withPool "test.sqlite" (\pool -> runSettings defaultSettings $ lambdadelta pool)
+
+-- |Migrate the database
+-- Todo: have the connection string be a parameter (config file?)
+migrate :: IO ()
+migrate = withDB "test.sqlite" $ runMigration migrateAll
+
+-- |Populate the database with test data
+-- Todo: have the connection string be a parameter (config file?)
+populate :: IO ()
+populate = withDB "test.sqlite" $ do
+             let board = D.Board "b" "Random" "Not like 4chan"
+             void $ insert board
+
+-------------------------
 
 -- |Run a database function
 withDB :: (MonadIO m, MonadBaseControl IO m)
@@ -48,6 +69,8 @@ withPool :: (MonadIO m, MonadBaseControl IO m)
          -> (ConnectionPool -> m a) -- ^ The function
          -> m a
 withPool connstr f = withSqlitePool connstr 10 f
+
+-------------------------
 
 -- |lambdadelta, or Λδ, is the actual WAI application. It takes a
 -- request, handles it, and produces a response. This just consists of
