@@ -5,6 +5,7 @@ module Database where
 import Database.Persist
 import Database.Persist.TH
 import Data.Time
+import Data.Text (Text)
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Post
@@ -18,20 +19,20 @@ Post
     -- was last bumped.
     updated UTCTime default=CURRENT_TIME
 
-    name     String
-    email    String
-    subject  String
-    comment  String
-    file     String Maybe
+    name     Text
+    email    Text
+    subject  Text
+    comment  Text
+    file     Text Maybe
     spoiler  Bool
-    password String
+    password Text
 
     UniquePostID number board
 
 Board
-    name     String
-    title    String
-    subtitle String
+    name     Text
+    title    Text
+    subtitle Text
 
     UniqueBoardName name
 |]
