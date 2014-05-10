@@ -15,16 +15,16 @@ import qualified Browse.Templates as T
 -- simple to write.
 
 index :: Handler
-index mkurl req = return $ responseLBS ok200 [] "index"
+index = return $ responseLBS ok200 [] "index"
 
 board :: Text -> Maybe Int -> Handler
-board board page mkurl req = return $ responseLBS ok200 [] "board"
+board board page = return $ responseLBS ok200 [] "board"
 
 thread :: Text -> Int -> Handler
-thread board thread mkurl req = return $ responseLBS ok200 [] "thread"
+thread board thread = return $ responseLBS ok200 [] "thread"
 
 postThread :: Text -> Handler
-postThread board mkurl req = return $ responseLBS ok200 [] "post thread"
+postThread board = return $ responseLBS ok200 [] "post thread"
 
 postReply :: Text -> Int -> Handler
-postReply board thread mkurl req = return $ responseLBS ok200 [] "post reply"
+postReply board thread = return $ responseLBS ok200 [] "post reply"

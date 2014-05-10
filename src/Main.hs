@@ -3,21 +3,16 @@
 module Main where
 
 import Browse.User
-
-import Control.Monad.IO.Class
-
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Trans.Reader (runReaderT)
 import Data.Maybe
 import Data.Text (Text)
 import Database.Persist.Sqlite
-
 import Network.HTTP.Types.Status
 import Network.Wai
 import Network.Wai.Handler.Warp
-
 import Routes
-
 import Types
-
 import Web.Routes.PathInfo
 import Web.Routes.Site
 
@@ -43,11 +38,10 @@ lambdadelta req = withSqlitePool ":memory:" 10 $ \pool ->
       Right resp -> liftIO $ runSqlPersistMPool resp pool
 
 -- |The main router
--- Todo: everything
 -- Todo: would web-routes-wai be useful?
 routeRequest :: MonadIO m => MkUrl -> Request -> Sitemap -> m Response
-routeRequest mkurl req Index           = index mkurl req
-routeRequest mkurl req (Board b p)     = board b p mkurl req
-routeRequest mkurl req (Thread b t)    = thread b t mkurl req
-routeRequest mkurl req (PostThread b)  = postThread b mkurl req
-routeRequest mkurl req (PostReply b t) = postReply b t mkurl req
+routeRequest mkurl req Index           = runReaderT index (mkurl, req)
+routeRequest mkurl req (Board b p)     = runReaderT (board b p) (mkurl, req)
+routeRequest mkurl req (Thread b t)    = runReaderT (thread b t) (mkurl, req)
+routeRequest mkurl req (PostThread b)  = runReaderT (postThread b) (mkurl, req)
+routeRequest mkurl req (PostReply b t) = runReaderT (postReply b t) (mkurl, req)
