@@ -2,8 +2,10 @@
 
 module Main where
 
+import Browse.User
+
 import Data.Maybe
-import Data.Text
+import Data.Text (Text)
 
 import Network.HTTP.Types.Status
 import Network.Wai
@@ -32,3 +34,12 @@ lambdadelta req = return $
     case runSite "/" (mkSitePI $ flip routeRequest req) $ pathInfo req of
       Left _ -> responseLBS notFound404 [] ""
       Right resp -> resp
+
+-- |The main router
+-- Todo: everything
+routeRequest :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Sitemap -> Response
+routeRequest mkurl req Index           = index mkurl req
+routeRequest mkurl req (Board b)       = board mkurl req b
+routeRequest mkurl req (Thread b t)    = thread mkurl req b t
+routeRequest mkurl req (PostThread b)  = postThread mkurl req b
+routeRequest mkurl req (PostReply b t) = postReply mkurl req b t

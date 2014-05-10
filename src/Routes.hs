@@ -1,12 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Routes (Sitemap(..), routeRequest) where
+module Routes where
 
 import Control.Applicative
 
 import Data.Text (Text, unpack, pack)
 
-import Network.HTTP.Types.Status
 import Network.Wai
 
 import Text.Read (readMaybe)
@@ -43,11 +42,3 @@ instance PathInfo Sitemap where
 
               fail = Left "Couldn't parse"
 
--- |The main router
--- Todo: everything
-routeRequest :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Sitemap -> Response
-routeRequest mkurl req Index = responseLBS ok200 [] "index"
-routeRequest mkurl req (Board name) = responseLBS ok200 [] "board"
-routeRequest mkurl req (Thread board thread) = responseLBS ok200 [] "thread"
-routeRequest mkurl req (PostThread board) = responseLBS ok200 [] "post thread"
-routeRequest mkurl req (PostReply board thread) = responseLBS ok200 [] "post reply"
