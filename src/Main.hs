@@ -16,6 +16,8 @@ import Network.Wai.Handler.Warp
 
 import Routes
 
+import Types
+
 import Web.Routes.PathInfo
 import Web.Routes.Site
 
@@ -42,9 +44,10 @@ lambdadelta req = withSqlitePool ":memory:" 10 $ \pool ->
 
 -- |The main router
 -- Todo: everything
-routeRequest :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Sitemap -> m Response
+-- Todo: would web-routes-wai be useful?
+routeRequest :: MonadIO m => MkUrl -> Request -> Sitemap -> m Response
 routeRequest mkurl req Index           = index mkurl req
-routeRequest mkurl req (Board b p)     = board mkurl req b p
-routeRequest mkurl req (Thread b t)    = thread mkurl req b t
-routeRequest mkurl req (PostThread b)  = postThread mkurl req b
-routeRequest mkurl req (PostReply b t) = postReply mkurl req b t
+routeRequest mkurl req (Board b p)     = board b p mkurl req
+routeRequest mkurl req (Thread b t)    = thread b t mkurl req
+routeRequest mkurl req (PostThread b)  = postThread b mkurl req
+routeRequest mkurl req (PostReply b t) = postReply b t mkurl req

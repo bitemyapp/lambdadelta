@@ -2,8 +2,8 @@
  - board :: Board, the current board
  - boardgroups :: [[Board]], list of board groupings
  - currentPage :: Int, the current page number
- - lastPage :: Int, the last page number
- - threads :: [((File, Post), Maybe (Int, Int), [(Maybe File, Post)])], list of threads, with head and replies to show, and number of posts/image posts omitted
+ - numPages :: Int, the number of pages
+ - threads :: [((File, Post), Int, Int, [(Maybe File, Post)])], list of threads, with OP, number of replies/image replies omitted, and posts to show
 -->
 
 $doctype 5
@@ -13,7 +13,7 @@ $doctype 5
     <title>/#{boardName board}/ - #{boardTitle board}
     <link rel="stylesheet" href="@{Stylesheet}">
   <body>
-    ^{navigation "top" (Just (board, currentPage, lastPage)) boardgroups}
+    ^{navigation Top (Just (board, currentPage, numPages)) boardgroups}
 
     <header>
       <img class="banner" src="@{Banner}">
@@ -22,7 +22,7 @@ $doctype 5
 
     <!-- post form - look at digestive-functors for that -->
 
-    $forall ((image, op), omitted, replies) <- threads
+    $forall TThread image op posts imageposts replies <- threads
       <div id="thread_#{postNumber op}">
         <p class="fileinfo"> File:
           <a href="@{File (boardName board) (fileName image)}">#{fileName image}
@@ -37,15 +37,14 @@ $doctype 5
             <a href="@{Thread (boardName board) (postNumber op)}">[Reply]
           <div class="body">
             #{postComment op}
-          $maybe (posts, imageposts) <- omitted
+          $if and [posts /= 0, imageposts /= 0]
             <p class="omitted">
-              $if posts == 1
-                $if imageposts == 1
-                  #{posts} post and #{imageposts} image reply omitted.
-                $else
-                  #{posts} post omitted.
+              $if and [posts == 1, imageposts == 1]
+                1 post and 1 image reply omitted.
+              $elseif posts == 1
+                1 post omitted.
               $elseif imageposts == 1
-                #{posts} posts and #{imageposts} image reply omitted.
+                #{posts} posts and ! image reply omitted.
               $elseif imageposts == 0
                 #{posts} posts omitted.
               $else
@@ -65,6 +64,6 @@ $doctype 5
             <div class="body">
               #{postComment post}
 
-    ^{navigation "bottom" (Just (board, currentPage, lastPage)) boardgroups}
+    ^{navigation Bottom (Just (board, currentPage, numPages)) boardgroups}
 
     ^{footer}

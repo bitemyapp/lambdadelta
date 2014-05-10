@@ -1,29 +1,30 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, Rank2Types #-}
 
 module Browse.User (index, board, thread, postThread, postReply) where
 
-import qualified Browse.Templates as T
-
-import Control.Monad.IO.Class
-
 import Data.Text (Text)
-
 import Network.HTTP.Types.Status
 import Network.Wai
-
 import Routes
+import Types
 
-index :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> m Response
+import qualified Browse.Templates as T
+
+-- Todo: can the mkurl and req parameters be hidden from the user?
+-- Perhaps in State or something, and then Handlers will be nice and
+-- simple to write.
+
+index :: Handler
 index mkurl req = return $ responseLBS ok200 [] "index"
 
-board :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> Maybe Int -> m Response
-board mkurl req board page = return $ responseLBS ok200 [] "board"
+board :: Text -> Maybe Int -> Handler
+board board page mkurl req = return $ responseLBS ok200 [] "board"
 
-thread :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> Int -> m Response
-thread mkurl req board thread = return $ responseLBS ok200 [] "thread"
+thread :: Text -> Int -> Handler
+thread board thread mkurl req = return $ responseLBS ok200 [] "thread"
 
-postThread :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> m Response
-postThread mkurl req board = return $ responseLBS ok200 [] "post thread"
+postThread :: Text -> Handler
+postThread board mkurl req = return $ responseLBS ok200 [] "post thread"
 
-postReply :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> Int -> m Response
-postReply mkurl req board thread = return $ responseLBS ok200 [] "post reply"
+postReply :: Text -> Int -> Handler
+postReply board thread mkurl req = return $ responseLBS ok200 [] "post reply"
