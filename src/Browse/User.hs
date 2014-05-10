@@ -10,10 +10,6 @@ import Types
 
 import qualified Browse.Templates as T
 
--- Todo: can the mkurl and req parameters be hidden from the user?
--- Perhaps in State or something, and then Handlers will be nice and
--- simple to write.
-
 index :: Handler
 index = return $ responseLBS ok200 [] "index"
 
