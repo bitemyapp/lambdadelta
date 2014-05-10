@@ -1,0 +1,22 @@
+<!-- Template vars:
+ - position :: Text, "top" or "bottom"
+ - board :: Maybe (Board, Int, Int), if on a board, the current board, page number and last page
+ - boardgroups :: [[Board]], groupings of boards for nav
+-->
+
+<nav class="#{position}">
+  <div class="boardlist">
+    $forall boardgroup <- boardgroups
+      <ol>
+        $forall board <- boardgroup
+          <li>
+            <a href="@{Board (boardName board) Nothing}" title="/#{boardName board}/ - #{boardTitle board}">#{boardName board}
+  $maybe (board, currentPage, numPages) <- board
+    <div class="pages top">
+      <ol>
+        $forall page <- pageList numPages
+          $if page == currentPage
+            <li class="selected">#{page}
+          $else
+            <li>
+              <a href="@{Board (boardName board) (Just page)}">#{page}

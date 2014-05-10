@@ -73,6 +73,7 @@ executable lambdadelta
                      , text >=1.1 && <1.2
                      , web-routes >=0.27 && <0.28
                      , transformers >=0.3 && <0.5
+                     , shakespeare >=2.0 && <2.1
   
   -- Directories containing source files.
   hs-source-dirs:      src

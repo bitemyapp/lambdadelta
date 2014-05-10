@@ -1,0 +1,70 @@
+<!-- Template vars:
+ - board :: Board, the current board
+ - boardgroups :: [[Board]], list of board groupings
+ - currentPage :: Int, the current page number
+ - lastPage :: Int, the last page number
+ - threads :: [((File, Post), Maybe (Int, Int), [(Maybe File, Post)])], list of threads, with head and replies to show, and number of posts/image posts omitted
+-->
+
+$doctype 5
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>/#{boardName board}/ - #{boardTitle board}
+    <link rel="stylesheet" href="@{Stylesheet}">
+  <body>
+    ^{navigation "top" (Just (board, currentPage, lastPage)) boardgroups}
+
+    <header>
+      <img class="banner" src="@{Banner}">
+      <h1>/#{boardName board}/ - #{boardTitle board}
+      <div class="subtitle">#{boardSubtitle board}
+
+    <!-- post form - look at digestive-functors for that -->
+
+    $forall ((image, op), omitted, replies) <- threads
+      <div id="thread_#{postNumber op}">
+        <p class="fileinfo"> File:
+          <a href="@{File (boardName board) (fileName image)}">#{fileName image}
+          <span>
+            (#{niceSize image}, #{fileWidth image}x#{fileHeight image}, #{fileOrigname image})
+        <a href="@{File (boardName board) (fileName image)}">
+          <img src="@{File (boardName board) (fileName image)}">
+        <div class="post op">
+          <p class="meta">
+            <a href="@{Thread (boardName board) (postNumber op)}##{postNumber op}">No.
+            <a href="@{Thread (boardName board) (postNumber op)}#q#{postNumber op}">#{postNumber op}
+            <a href="@{Thread (boardName board) (postNumber op)}">[Reply]
+          <div class="body">
+            #{postComment op}
+          $maybe (posts, imageposts) <- omitted
+            <p class="omitted">
+              $if posts == 1
+                $if imageposts == 1
+                  #{posts} post and #{imageposts} image reply omitted.
+                $else
+                  #{posts} post omitted.
+              $elseif imageposts == 1
+                #{posts} posts and #{imageposts} image reply omitted.
+              $elseif imageposts == 0
+                #{posts} posts omitted.
+              $else
+                #{posts} posts and #{imageposts} image replies omitted.
+              Click reply to view.
+
+        $forall (image, post) <- replies
+          <div class="post reply" id="reply_#{postNumber post}">
+            $maybe image <- image
+              <p class="fileinfo">
+                File:
+                <a href="@{File (boardName board) (fileName image)}">#{fileName image}
+                <span>
+                  (#{niceSize image} KB, #{fileWidth image}x#{fileHeight image}, #{fileOrigname image})
+              <a href="@{File (boardName board) (fileName image)}">
+                <img src="@{File (boardName board) (fileName image)}">
+            <div class="body">
+              #{postComment post}
+
+    ^{navigation "bottom" (Just (board, currentPage, lastPage)) boardgroups}
+
+    ^{footer}

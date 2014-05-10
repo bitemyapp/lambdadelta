@@ -2,6 +2,8 @@
 
 module Browse.User (index, board, thread, postThread, postReply) where
 
+import qualified Browse.Templates as T
+
 import Control.Monad.IO.Class
 
 import Data.Text (Text)
