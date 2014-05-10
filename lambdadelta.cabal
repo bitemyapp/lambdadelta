@@ -58,7 +58,9 @@ executable lambdadelta
                      , Routes
                      , Types
                      , Browse.User
-  
+
+  ghc-options: -Wall  
+
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:    
   
