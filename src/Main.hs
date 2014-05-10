@@ -7,6 +7,7 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Reader (runReaderT)
 import Data.Maybe
 import Data.Text (Text)
+import Database (migrateAll)
 import Database.Persist.Sqlite
 import Network.HTTP.Types.Status
 import Network.Wai
@@ -21,7 +22,16 @@ import Web.Routes.Site
 -- Todo: have different execution modes (run server, migrate database, etc)
 main :: IO ()
 main = do putStrLn $ "Starting Λδ on port " ++ show (settingsPort defaultSettings)
-          runSettings defaultSettings lambdadelta
+          withDB $ do
+            runMigration migrateAll
+            liftIO $ runSettings defaultSettings lambdadelta
+
+
+-- |Run a database function
+-- Todo: don't hard-code the database
+-- Todo: size of database pool configurable
+withDB :: SqlPersistM () -> IO ()
+withDB f = withSqlitePool ":memory:" 10 $ \pool -> runSqlPersistMPool f pool
 
 -- |lambdadelta, or Λδ, is the actual WAI application. It takes a
 -- request, handles it, and produces a response. This just consists of
@@ -29,13 +39,11 @@ main = do putStrLn $ "Starting Λδ on port " ++ show (settingsPort defaultSetti
 -- failing with a 404 if nothing matches.
 -- Todo: get the proper application root
 -- Todo: handle static files
--- Todo: don't hard-code the database
--- Todo: size of database pool configurable
 lambdadelta :: Application
-lambdadelta req = withSqlitePool ":memory:" 10 $ \pool ->
-    case runSite "/" (mkSitePI $ flip routeRequest req) $ pathInfo req of
-      Left _ -> return $ responseLBS notFound404 [] ""
-      Right resp -> liftIO $ runSqlPersistMPool resp pool
+lambdadelta req = case handle req of
+                    Left _ -> return $ responseLBS notFound404 [] ""
+                    Right resp -> resp
+    where handle req = runSite "/" (mkSitePI $ flip routeRequest req) $ pathInfo req
 
 -- |The main router
 -- Todo: would web-routes-wai be useful?
