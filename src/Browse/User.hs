@@ -2,6 +2,8 @@
 
 module Browse.User (index, board, thread, postThread, postReply) where
 
+import Control.Monad.IO.Class
+
 import Data.Text (Text)
 
 import Network.HTTP.Types.Status
@@ -9,17 +11,17 @@ import Network.Wai
 
 import Routes
 
-index :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> IO Response
+index :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> m Response
 index mkurl req = return $ responseLBS ok200 [] "index"
 
-board :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> IO Response
+board :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> m Response
 board mkurl req board = return $ responseLBS ok200 [] "board"
 
-thread :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> Int -> IO Response
+thread :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> Int -> m Response
 thread mkurl req board thread = return $ responseLBS ok200 [] "thread"
 
-postThread :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> IO Response
+postThread :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> m Response
 postThread mkurl req board = return $ responseLBS ok200 [] "post thread"
 
-postReply :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> Int -> IO Response
+postReply :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> Int -> m Response
 postReply mkurl req board thread = return $ responseLBS ok200 [] "post reply"

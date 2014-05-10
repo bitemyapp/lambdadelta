@@ -4,8 +4,11 @@ module Main where
 
 import Browse.User
 
+import Control.Monad.IO.Class
+
 import Data.Maybe
 import Data.Text (Text)
+import Database.Persist.Sqlite
 
 import Network.HTTP.Types.Status
 import Network.Wai
@@ -29,15 +32,17 @@ main = do putStrLn $ "Starting Λδ on port " ++ show (settingsPort defaultSetti
 -- failing with a 404 if nothing matches.
 -- Todo: get the proper application root
 -- Todo: handle static files
+-- Todo: don't hard-code the database
+-- Todo: size of database pool configurable
 lambdadelta :: Application
-lambdadelta req =
+lambdadelta req = withSqlitePool ":memory:" 10 $ \pool ->
     case runSite "/" (mkSitePI $ flip routeRequest req) $ pathInfo req of
       Left _ -> return $ responseLBS notFound404 [] ""
-      Right resp -> resp
+      Right resp -> liftIO $ runSqlPersistMPool resp pool
 
 -- |The main router
 -- Todo: everything
-routeRequest :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Sitemap -> IO Response
+routeRequest :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Sitemap -> m Response
 routeRequest mkurl req Index           = index mkurl req
 routeRequest mkurl req (Board b)       = board mkurl req b
 routeRequest mkurl req (Thread b t)    = thread mkurl req b t

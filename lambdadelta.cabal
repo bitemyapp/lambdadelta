@@ -65,12 +65,14 @@ executable lambdadelta
   build-depends:       base >=4.7 && <4.8
                      , persistent >=1.3 && <1.4
                      , persistent-template >=1.3 && <1.4
+                     , persistent-sqlite >=1.3 && <1.4
                      , time >=1.4 && <1.5
                      , http-types >=0.8 && <0.9
                      , wai >=2.1 && <2.2
                      , warp >=2.1 && <2.2
                      , text >=1.1 && <1.2
                      , web-routes >=0.27 && <0.28
+                     , transformers >=0.3 && <0.5
   
   -- Directories containing source files.
   hs-source-dirs:      src
