@@ -19,12 +19,12 @@ Post
     -- was last bumped.
     updated UTCTime default=CURRENT_TIME
 
+    file FileId Maybe
+
     name     Text
     email    Text
     subject  Text
     comment  Text
-    file     Text Maybe
-    spoiler  Bool
     password Text
 
     UniquePostID number board
@@ -35,4 +35,16 @@ Board
     subtitle Text
 
     UniqueBoardName name
+
+File
+    name     Text
+    origname Text
+    post     PostId
+
+    -- In bytes
+    size     Int
+
+    width    Int
+    height   Int
+    spoiler  Bool
 |]
