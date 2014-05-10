@@ -14,8 +14,8 @@ import Routes
 index :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> m Response
 index mkurl req = return $ responseLBS ok200 [] "index"
 
-board :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> m Response
-board mkurl req board = return $ responseLBS ok200 [] "board"
+board :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> Maybe Int -> m Response
+board mkurl req board page = return $ responseLBS ok200 [] "board"
 
 thread :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> Int -> m Response
 thread mkurl req board thread = return $ responseLBS ok200 [] "thread"

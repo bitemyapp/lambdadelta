@@ -44,7 +44,7 @@ lambdadelta req = withSqlitePool ":memory:" 10 $ \pool ->
 -- Todo: everything
 routeRequest :: MonadIO m => (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Sitemap -> m Response
 routeRequest mkurl req Index           = index mkurl req
-routeRequest mkurl req (Board b)       = board mkurl req b
+routeRequest mkurl req (Board b p)     = board mkurl req b p
 routeRequest mkurl req (Thread b t)    = thread mkurl req b t
 routeRequest mkurl req (PostThread b)  = postThread mkurl req b
 routeRequest mkurl req (PostReply b t) = postReply mkurl req b t
