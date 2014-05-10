@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 
-module Browse.Templates (TThread, board) where
+module Browse.Templates (TThread, board, index) where
 
 import Data.Text (Text, pack)
 

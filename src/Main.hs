@@ -7,6 +7,7 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Control (MonadBaseControl)
 import Control.Monad.Trans.Reader (runReaderT)
 import Database (migrateAll)
+import Database.Persist (insert)
 import Database.Persist.Sql (ConnectionPool, SqlPersistM, runSqlPersistMPool, runMigration)
 import Database.Persist.Sqlite (withSqlitePool)
 import Network.HTTP.Types.Status
@@ -17,12 +18,16 @@ import Types
 import Web.Routes.PathInfo
 import Web.Routes.Site
 
+import qualified Database as D
+
 -- |Fire up the server on the default port and just listen forever for requests.
 -- Todo: have the host and posrt be parameters
 -- Todo: have different execution modes (run server, migrate database, etc)
+-- Todo: Don't insert a test board
 main :: IO ()
 main = do putStrLn $ "Starting Λδ on port " ++ show (settingsPort defaultSettings)
-          withDB $ runMigration migrateAll
+          withDB $ do runMigration migrateAll
+                      insert $ D.Board "b" "Random" "Not like 4chan"
           withPool (\pool -> runSettings defaultSettings $ lambdadelta pool)
 
 
