@@ -46,6 +46,13 @@ board :: D.Board     -- ^ The board
       -> HtmlUrl Sitemap
 board board boardgroups currentPage numPages threads = $(hamletFile "templates/html/board.hamlet")
 
+-- |Index template
+-- Todo: recent posts/images
+-- Todo: title
+index :: [[D.Board]] -- ^ The boad groupings
+      -> HtmlUrl Sitemap
+index boardgroups = $(hamletFile "templates/html/index.hamlet")
+
 -- |Turn a filesize (in bytes) into a nice string
 niceSize :: D.File -> Text
 niceSize image = let (sz, unit) = niceSize' (fromIntegral $ fileSize image) "B"
