@@ -9,17 +9,17 @@ import Network.Wai
 
 import Routes
 
-index :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Response
-index mkurl req = responseLBS ok200 [] "index"
+index :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> IO Response
+index mkurl req = return $ responseLBS ok200 [] "index"
 
-board :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> Response
-board mkurl req board = responseLBS ok200 [] "board"
+board :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> IO Response
+board mkurl req board = return $ responseLBS ok200 [] "board"
 
-thread :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> Int -> Response
-thread mkurl req board thread = responseLBS ok200 [] "thread"
+thread :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> Int -> IO Response
+thread mkurl req board thread = return $ responseLBS ok200 [] "thread"
 
-postThread :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> Response
-postThread mkurl req board = responseLBS ok200 [] "post thread"
+postThread :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> IO Response
+postThread mkurl req board = return $ responseLBS ok200 [] "post thread"
 
-postReply :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> Int -> Response
-postReply mkurl req board thread = responseLBS ok200 [] "post reply"
+postReply :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Text -> Int -> IO Response
+postReply mkurl req board thread = return $ responseLBS ok200 [] "post reply"

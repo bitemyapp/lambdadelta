@@ -30,14 +30,14 @@ main = do putStrLn $ "Starting Λδ on port " ++ show (settingsPort defaultSetti
 -- Todo: get the proper application root
 -- Todo: handle static files
 lambdadelta :: Application
-lambdadelta req = return $
+lambdadelta req =
     case runSite "/" (mkSitePI $ flip routeRequest req) $ pathInfo req of
-      Left _ -> responseLBS notFound404 [] ""
+      Left _ -> return $ responseLBS notFound404 [] ""
       Right resp -> resp
 
 -- |The main router
 -- Todo: everything
-routeRequest :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Sitemap -> Response
+routeRequest :: (Sitemap -> [(Text, Maybe Text)] -> Text) -> Request -> Sitemap -> IO Response
 routeRequest mkurl req Index           = index mkurl req
 routeRequest mkurl req (Board b)       = board mkurl req b
 routeRequest mkurl req (Thread b t)    = thread mkurl req b t
