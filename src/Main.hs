@@ -51,7 +51,7 @@ lambdadelta :: ConnectionPool -> Application
 lambdadelta pool req = case handle req of
                          Left _ -> return $ responseLBS notFound404 [] ""
                          Right resp -> runSqlPersistMPool resp pool
-    where handle req = runSite "/" (mkSitePI $ flip routeRequest req) $ pathInfo req
+    where handle req = runSite "http://localhost:3000" (mkSitePI $ flip routeRequest req) $ pathInfo req
 
 -- |The main router
 -- Todo: would web-routes-wai be useful?
