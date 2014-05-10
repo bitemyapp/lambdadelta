@@ -10,6 +10,7 @@ import Database (migrateAll)
 import Database.Persist (insert)
 import Database.Persist.Sql (ConnectionPool, SqlPersistM, runSqlPersistMPool, runMigration)
 import Database.Persist.Sqlite (withSqlitePool)
+import Data.Text (Text)
 import Network.HTTP.Types.Status
 import Network.Wai
 import Network.Wai.Handler.Warp
@@ -26,20 +27,27 @@ import qualified Database as D
 -- Todo: Don't insert a test board
 main :: IO ()
 main = do putStrLn $ "Starting Λδ on port " ++ show (settingsPort defaultSettings)
-          withDB $ do runMigration migrateAll
-                      insert $ D.Board "b" "Random" "Not like 4chan"
-          withPool (\pool -> runSettings defaultSettings $ lambdadelta pool)
+          let connstr = "test.sqlite"
+          withDB connstr $ do runMigration migrateAll
+                              insert $ D.Board "b" "Random" "Not like 4chan"
+          withPool connstr (\pool -> runSettings defaultSettings $ lambdadelta pool)
 
 
 -- |Run a database function
-withDB :: (MonadIO m, MonadBaseControl IO m) => SqlPersistM a -> m a
-withDB f = withPool (\pool -> liftIO $ runSqlPersistMPool f pool)
+withDB :: (MonadIO m, MonadBaseControl IO m)
+       => Text          -- ^ The connection string
+       -> SqlPersistM a -- ^ The database function
+       -> m a
+withDB connstr f = withPool connstr (\pool -> liftIO $ runSqlPersistMPool f pool)
 
 -- |Run a database function which takes a connection pool
 -- Todo: don't hard-code the database
 -- Todo: size of database pool configurable
-withPool :: (MonadIO m, MonadBaseControl IO m) => (ConnectionPool -> m a) -> m a
-withPool f = withSqlitePool "test.sqlite" 10 f
+withPool :: (MonadIO m, MonadBaseControl IO m)
+         => Text                   -- ^ The connection string
+         -> (ConnectionPool -> m a) -- ^ The function
+         -> m a
+withPool connstr f = withSqlitePool connstr 10 f
 
 -- |lambdadelta, or Λδ, is the actual WAI application. It takes a
 -- request, handles it, and produces a response. This just consists of
