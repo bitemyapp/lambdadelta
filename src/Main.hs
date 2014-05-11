@@ -11,14 +11,18 @@ import Database (migrateAll)
 import Database.Persist (insert)
 import Database.Persist.Sql (ConnectionPool, SqlPersistM, runSqlPersistMPool, runMigration)
 import Database.Persist.Sqlite (withSqlitePool)
-import Data.Text (Text)
+import Data.Text (Text, unpack)
+import Network.HTTP.Types.Status (ok200, notFound404)
 import Network.Wai
 import Network.Wai.Handler.Warp
 import Routes
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
+import System.Directory (doesFileExist)
+import System.FilePath.Posix (joinPath)
 import Types
 import Web.Routes.Wai (handleWai)
+import Web.Routes.PathInfo (toPathSegments)
 
 import qualified Database as D
 
@@ -75,7 +79,6 @@ withPool connstr f = withSqlitePool connstr 10 f
 -- checking the defined routes, checking for static files, and finally
 -- failing with a 404 if nothing matches.
 -- Todo: get the proper application root
--- Todo: handle static files
 lambdadelta :: ConnectionPool -> Application
 lambdadelta = handleWai "http://localhost:3000" . routeRequest
 
@@ -86,10 +89,22 @@ routeRequest pool mkurl path req = runSqlPersistMPool requestHandler pool
     where requestHandler = runReaderT (handler path) (mkurl, req)
 
 -- |Route a request to a handler
--- Todo: handle static files
 handler :: Sitemap -> Handler
 handler Index           = index
 handler (Board b p)     = board b p
 handler (Thread b t)    = thread b t
 handler (PostThread b)  = postThread b
 handler (PostReply b t) = postReply b t
+handler path            = static $ toPathSegments path
+
+-- |Process a request for a static file
+-- This isn't the best way to serve static files, your actual web
+-- server should really do this.
+-- Todo: get the proper filesystem root
+static :: [Text] -- ^ The file path components
+       -> Handler
+static path = do let fullPath = joinPath $ "/tmp" : (map unpack path)
+                 exists <- liftIO $ doesFileExist fullPath
+                 return $ if exists
+                          then responseFile ok200 [] fullPath Nothing
+                          else responseLBS notFound404 [] "File not found"
