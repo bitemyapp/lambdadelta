@@ -1,15 +1,15 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 
-module Browse.Templates (TThread, board, index) where
+module Browse.Templates (TThread, board, index, Browse.Templates.error) where
 
 import Data.Text (Text, pack)
-
+import Data.Text.Encoding (decodeUtf8)
 import Database hiding (Board, File, Post)
-import qualified Database as D
-
+import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import Routes
-
 import Text.Hamlet (HtmlUrl, hamletFile)
+
+import qualified Database as D
 
 -- |Navigation bar position type
 -- This isn't exported as the navigation template is only included by other
@@ -52,6 +52,12 @@ board board boardgroups currentPage numPages threads = $(hamletFile "templates/h
 index :: [[D.Board]] -- ^ The boad groupings
       -> HtmlUrl Sitemap
 index boardgroups = $(hamletFile "templates/html/index.hamlet")
+
+-- |Error template
+error :: Status -> String -> HtmlUrl Sitemap
+error status description = let code    = statusCode status
+                               message = decodeUtf8 $ statusMessage status
+                           in $(hamletFile "templates/html/error.hamlet")
 
 -- |Turn a filesize (in bytes) into a nice string
 niceSize :: D.File -> Text

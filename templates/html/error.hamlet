@@ -1,0 +1,19 @@
+<!-- Template vars:
+ - status :: Status, the status
+ - code :: Int, the numerical status code
+ - message :: Text, the status message
+ - description :: String, description of the error
+-->
+
+$doctype 5
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>#{code} - #{message}
+    <link rel="stylesheet" href="@{Stylesheet}">
+
+  <body>
+    <h1>#{code} - #{message}
+    <p>Something went wrong.
+    <p>
+      <a href="@{Index}">Return</a>

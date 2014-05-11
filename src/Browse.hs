@@ -10,13 +10,15 @@ import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import Network.HTTP.Types.Status
-import Network.Wai (responseBuilder, responseFile, responseLBS)
+import Network.Wai (responseBuilder, responseFile)
 import Routes
 import Text.Blaze.Html.Renderer.Utf8 (renderHtmlBuilder)
 import Text.Hamlet (HtmlUrl)
 import System.Directory (doesFileExist)
 import System.FilePath.Posix (joinPath)
 import Types
+
+import qualified Browse.Templates as T (error)
 
 -- |Produce a 200 OK response from the given HTML
 html200Response :: HtmlUrl Sitemap -> Handler
@@ -79,6 +81,6 @@ respondFile fp = do fileroot <- conf' "server" "file_root"
 -- root). If the file doesn't exist, a 404 error is raised.
 respondFile' :: FilePath -> Handler
 respondFile' fp = do exists <- liftIO $ doesFileExist fp
-                     return $ if exists
-                              then responseFile ok200 [] fp Nothing
-                              else responseLBS notFound404 [] "File not found"
+                     if exists
+                     then return $ responseFile ok200 [] fp Nothing
+                     else htmlResponse notFound404 $ T.error notFound404 "File not found"

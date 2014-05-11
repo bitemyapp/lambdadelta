@@ -4,7 +4,9 @@ module Main where
 
 import Browse (respondFile)
 import Browse.User
+import Browse.Error (error404, error500)
 import Configuration (loadConfigFile, defaults, get')
+import Control.Exception.Base ()
 import Control.Monad (when, void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Control (MonadBaseControl)
@@ -18,16 +20,16 @@ import Database (migrateAll)
 import Database.Persist (insert)
 import Database.Persist.Sql (ConnectionPool, SqlPersistM, runSqlPersistMPool, runMigration)
 import Database.Persist.Sqlite (withSqlitePool)
-import Network.HTTP.Types.Status (notFound404)
-import Network.Wai (Application, responseLBS)
+import Network.Wai (Application)
 import Network.Wai.Handler.Warp
 import Routes
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.FilePath.Posix (joinPath)
+import System.IO.Error (catchIOError)
 import Types
-import Web.Routes.Wai (handleWaiError)
-import Web.Routes.PathInfo (toPathInfoParams, toPathSegments, fromPathInfo)
+import Web.Routes.Wai (handleWai)
+import Web.Routes.PathInfo (toPathSegments)
 
 import qualified Database as D
 
@@ -110,13 +112,15 @@ withPool = withSqlitePool
 -- failing with a 404 if nothing matches.
 lambdadelta :: ConfigParser -> ConnectionPool -> Application
 lambdadelta conf = let webroot = get' conf "server" "web_root"
-                   in handleWaiError toPathInfoParams fromPathInfo (fromString webroot) error404 . routeRequest conf
+                   in handleWai (fromString webroot) . routeRequest conf
 
 -- |Route and process a request
 -- Todo: use SqlPersistT?
 routeRequest :: ConfigParser -> ConnectionPool -> MkUrl -> Sitemap -> Application
-routeRequest conf pool mkurl path req = runSqlPersistMPool requestHandler pool
-    where requestHandler = runReaderT (handler path) (conf, mkurl, req)
+routeRequest conf pool mkurl path req = runSqlPersistMPool requestHandler pool `catchIOError` \error -> runSqlPersistMPool (runError error) pool
+    where requestHandler = runHandler $ handler path
+          runError error = runHandler $ error500 (show error)
+          runHandler h   = runReaderT h (conf, mkurl, req)
 
 -- |Route a request to a handler
 handler :: Sitemap -> Handler
@@ -125,6 +129,7 @@ handler (Board b p)     = board b p
 handler (Thread b t)    = thread b t
 handler (PostThread b)  = postThread b
 handler (PostReply b t) = postReply b t
+handler Error404        = error404 "File not found"
 handler path            = static $ toPathSegments path
 
 -- |Process a request for a static file
@@ -133,7 +138,3 @@ handler path            = static $ toPathSegments path
 static :: [Text] -- ^ The file path components
        -> Handler
 static path = respondFile . joinPath $ map unpack path
-
--- |A 404 error
-error404 :: String -> Application
-error404 _ _ = return $ responseLBS notFound404 [] "File not found"

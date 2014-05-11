@@ -17,6 +17,7 @@ data Sitemap = Index              -- ^ site index: /
              | File Text Text     -- ^ files: /b/src/123.png
              | Stylesheet         -- ^ stylesheets: /style.css
              | Banner             -- ^ banners: /banner.png
+             | Error404           -- ^ catch-all route
                deriving Show
 
 instance PathInfo Sitemap where
@@ -32,29 +33,29 @@ instance PathInfo Sitemap where
 
     fromPathSegments = patternParse parse
 
-        where parse []             = Right Index
+        where parse = Right . parse'
 
-              parse ["post", b, ""]    = parse ["post", b]
-              parse ["post", b, t, ""] = parse ["post", b, t]
-              parse [b, ""]            = parse [b]
-              parse [b, p, ""]         = parse [b, p]
-              parse [b, "res", t, ""]  = parse [b, "res", t]
+              parse' []             = Index
 
-              parse ["style.css"]  = Right Stylesheet
-              parse ["banner.png"] = Right Banner
-              parse ["post", b]    = Right $ PostThread b
-              parse ["post", b, t] = case readMaybe $ unpack t of
-                                       Just t' -> Right $ PostReply b t'
-                                       Nothing -> fail
-              parse [b]            = Right $ Board b Nothing
-              parse [b, p]         = case readMaybe $ unpack p of
-                                       Just p' -> Right $ Board b (Just p')
-                                       Nothing -> fail
-              parse [b, "res", t]  = case readMaybe $ unpack t of
-                                       Just t' -> Right $ Thread b t'
-                                       Nothing -> fail
-              parse [b, "src", f]  = Right $ File b f
+              parse' ["post", b, ""]    = parse' ["post", b]
+              parse' ["post", b, t, ""] = parse' ["post", b, t]
+              parse' [b, ""]            = parse' [b]
+              parse' [b, p, ""]         = parse' [b, p]
+              parse' [b, "res", t, ""]  = parse' [b, "res", t]
 
-              parse _              = fail
+              parse' ["style.css"]  = Stylesheet
+              parse' ["banner.png"] = Banner
+              parse' ["post", b]    = PostThread b
+              parse' ["post", b, t] = case readMaybe $ unpack t of
+                                       Just t' -> PostReply b t'
+                                       Nothing -> Error404
+              parse' [b]            = Board b Nothing
+              parse' [b, p]         = case readMaybe $ unpack p of
+                                       Just p' -> Board b (Just p')
+                                       Nothing -> Error404
+              parse' [b, "res", t]  = case readMaybe $ unpack t of
+                                       Just t' -> Thread b t'
+                                       Nothing -> Error404
+              parse' [b, "src", f]  = File b f
 
-              fail = Left "Couldn't parse"
+              parse' _              = Error404

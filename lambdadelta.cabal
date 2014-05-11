@@ -58,6 +58,7 @@ executable lambdadelta
                      , Routes
                      , Types
                      , Browse
+                     , Browse.Error
                      , Browse.User
                      , Browse.Templates
                      , Configuration
