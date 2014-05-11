@@ -10,7 +10,7 @@
       <ol>
         $forall board <- boardgroup
           <li>
-            <a href="@{Board (boardName board) Nothing}" title="/#{boardName board}/ - #{boardTitle board}">#{boardName board}
+            <a href="@{Board (boardName board) 1}" title="/#{boardName board}/ - #{boardTitle board}">#{boardName board}
   $maybe (board, currentPage, numPages) <- board
     <div class="pages top">
       <ol>
@@ -19,4 +19,4 @@
             <li class="selected">#{page}
           $else
             <li>
-              <a href="@{Board (boardName board) (Just page)}">#{page}
+              <a href="@{Board (boardName board) page}">#{page}

@@ -31,7 +31,6 @@ loadConfigFile filename = loadCP `catchIOError` const (return Nothing)
                       return . Just . merge defaults $ forceEither cp
 
 -- |Default configuration values
--- These are for just the settings used by the server
 defaults :: ConfigParser
 defaults = forceEither . readstring emptyCP $ unlines
            [ "[server]"
@@ -42,6 +41,10 @@ defaults = forceEither . readstring emptyCP $ unlines
            , "[database]"
            , "connection_string = lambdadelta.sqlite"
            , "pool_size         = 10"
+           , "[board]"
+           , "summary_size = 5"
+           , "threads_per_page = 10"
+           , "maximum_pages = 10"
            ]
 
 -- |Get a value from the configuration unsafely

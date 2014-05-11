@@ -4,6 +4,7 @@ module Database where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Control (MonadBaseControl)
+import Database.Persist
 import Database.Persist.TH
 import Data.Time
 import Data.Text (Text)
@@ -16,7 +17,7 @@ Post
     board   BoardId
 
     -- If this is Nothing, this post is the start of a new thread.
-    thread  Int Maybe
+    thread  PostId Maybe
 
     -- This is normally the created time, but for a thread it is the time it
     -- was last bumped.
@@ -73,3 +74,9 @@ withPool = withSqlitePool
 -- |Process a database function which takes a connection pool
 runPool :: SqlPersistM a -> ConnectionPool -> IO a
 runPool = runSqlPersistMPool
+
+-------------------------
+
+-- |Turn a database entity into a value
+unentity :: Entity a -> a
+unentity (Entity _ val) = val

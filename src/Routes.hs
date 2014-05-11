@@ -10,7 +10,7 @@ import Web.Routes.PathInfo
 -- Todo: Stylesheet takes the name of the stylesheet as a parameter
 -- Todo: Figure out some way of dynamically choosing banner
 data Sitemap = Index              -- ^ site index: /
-             | Board Text (Maybe Int) -- ^ board index: /b/<page>
+             | Board Text Int     -- ^ board index: /b/<page>
              | Thread Text Int    -- ^ thread display: /b/res/123
              | PostThread Text    -- ^ new thread: /post/b/
              | PostReply Text Int -- ^ new reply: /post/b/123
@@ -24,8 +24,8 @@ instance PathInfo Sitemap where
     toPathSegments Index = []
     toPathSegments Stylesheet = ["style.css"]
     toPathSegments Banner = ["banner.png"]
-    toPathSegments (Board board Nothing) = [board]
-    toPathSegments (Board board (Just page)) = [board, pack $ show page]
+    toPathSegments (Board board 1) = [board]
+    toPathSegments (Board board page) = [board, pack $ show page]
     toPathSegments (Thread board thread) = [board, pack $ show thread]
     toPathSegments (PostThread board) = ["post", board]
     toPathSegments (PostReply board thread) = ["post", board, pack $ show thread]
@@ -49,9 +49,9 @@ instance PathInfo Sitemap where
               parse' ["post", b, t] = case readMaybe $ unpack t of
                                        Just t' -> PostReply b t'
                                        Nothing -> Error404
-              parse' [b]            = Board b Nothing
+              parse' [b]            = Board b 1
               parse' [b, p]         = case readMaybe $ unpack p of
-                                       Just p' -> Board b (Just p')
+                                       Just p' -> Board b p'
                                        Nothing -> Error404
               parse' [b, "res", t]  = case readMaybe $ unpack t of
                                        Just t' -> Thread b t'
