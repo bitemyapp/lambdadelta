@@ -4,7 +4,7 @@ module Browse where
 
 import Blaze.ByteString.Builder (Builder)
 import Blaze.ByteString.Builder.ByteString (fromByteString)
-import Configuration (get')
+import Configuration (conf')
 import Control.Monad.IO.Class (liftIO)
 import Data.ByteString (ByteString)
 import Data.Text (Text)
@@ -70,8 +70,7 @@ respond status = return . responseBuilder status []
 -- |Produce a response from the given file path (minus file root). If
 -- the file doesn't exist, a 404 error is raised.
 respondFile :: FilePath -> Handler
-respondFile fp = do conf <- askConf
-                    let fileroot = get' conf "server" "file_root"
+respondFile fp = do fileroot <- conf' "server" "file_root"
                     let fullPath = joinPath [fileroot, fp]
 
                     respondFile' fullPath

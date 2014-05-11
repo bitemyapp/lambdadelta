@@ -4,7 +4,7 @@ module Main where
 
 import Browse (respondFile)
 import Browse.User
-import Configuration
+import Configuration (loadConfigFile, defaults, get')
 import Control.Monad (when, void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Control (MonadBaseControl)

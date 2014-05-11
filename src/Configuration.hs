@@ -1,8 +1,12 @@
-module Configuration (loadConfigFile, defaults, get') where
+{-# LANGUAGE FlexibleContexts #-}
 
+module Configuration where
+
+import Control.Monad.Error.Class (MonadError)
 import Data.ConfigFile
 import Data.Either.Utils (forceEither)
 import System.IO.Error (catchIOError)
+import Types (RequestProcessor, askConf)
 
 -- |Load a configuration file by name.
 -- All errors (syntax, file access, etc) are squashed together,
@@ -41,3 +45,14 @@ defaults = forceEither . readstring emptyCP $ unlines
 -- |Get a value from the configuration unsafely
 get' :: Get_C a => ConfigParser -> SectionSpec -> OptionSpec -> a
 get' cp ss os = forceEither $ get cp ss os
+
+-- |Get a value from the configuration in a handler, abstracting the
+-- askConf/get pattern
+conf :: (Get_C a, MonadError CPError m) => SectionSpec -> OptionSpec -> RequestProcessor (m a)
+conf ss os = do config <- askConf
+                return $ get config ss os
+
+-- |Get a value from the configuration in a handler unsafely
+conf' :: Get_C a => SectionSpec -> OptionSpec -> RequestProcessor a
+conf' ss os = do config <- askConf
+                 return $ get' config ss os
