@@ -33,6 +33,13 @@ instance PathInfo Sitemap where
     fromPathSegments = patternParse parse
 
         where parse []             = Right Index
+
+              parse ["post", b, ""]    = parse ["post", b]
+              parse ["post", b, t, ""] = parse ["post", b, t]
+              parse [b, ""]            = parse [b]
+              parse [b, p, ""]         = parse [b, p]
+              parse [b, "res", t, ""]  = parse [b, "res", t]
+
               parse ["style.css"]  = Right Stylesheet
               parse ["banner.png"] = Right Banner
               parse ["post", b]    = Right $ PostThread b
@@ -47,6 +54,7 @@ instance PathInfo Sitemap where
                                        Just t' -> Right $ Thread b t'
                                        Nothing -> fail
               parse [b, "src", f]  = Right $ File b f
+
               parse _              = fail
 
               fail = Left "Couldn't parse"
