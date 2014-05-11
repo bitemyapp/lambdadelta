@@ -57,6 +57,7 @@ executable lambdadelta
   other-modules:       Database
                      , Routes
                      , Types
+                     , Browse
                      , Browse.User
                      , Browse.Templates
                      , Configuration
@@ -87,6 +88,7 @@ executable lambdadelta
                      , ConfigFile >=1.1 && <1.2
                      , MissingH >=1.2 && <1.3
                      , bytestring >=0.10 && <0.11
+                     , blaze-builder >=0.3 && <0.4
   
   -- Directories containing source files.
   hs-source-dirs:      src

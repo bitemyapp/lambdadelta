@@ -2,6 +2,7 @@
 
 module Main where
 
+import Browse (respondFile)
 import Browse.User
 import Configuration
 import Control.Monad (when, void)
@@ -17,13 +18,11 @@ import Database (migrateAll)
 import Database.Persist (insert)
 import Database.Persist.Sql (ConnectionPool, SqlPersistM, runSqlPersistMPool, runMigration)
 import Database.Persist.Sqlite (withSqlitePool)
-import Network.HTTP.Types.Status (ok200, notFound404)
 import Network.Wai
 import Network.Wai.Handler.Warp
 import Routes
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
-import System.Directory (doesFileExist)
 import System.FilePath.Posix (joinPath)
 import Types
 import Web.Routes.Wai (handleWai)
@@ -132,11 +131,4 @@ handler path            = static $ toPathSegments path
 -- server should really do this.
 static :: [Text] -- ^ The file path components
        -> Handler
-static path = do conf <- askConf
-                 let fileroot = get' conf "server" "file_root"
-                 let fullPath = joinPath $ fileroot : map unpack path
-
-                 exists <- liftIO $ doesFileExist fullPath
-                 return $ if exists
-                          then responseFile ok200 [] fullPath Nothing
-                          else responseLBS notFound404 [] "File not found"
+static path = respondFile . joinPath $ map unpack path
