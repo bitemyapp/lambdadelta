@@ -8,17 +8,14 @@ import Browse.Error (error404, error500)
 import Configuration (loadConfigFile, defaults, get')
 import Control.Exception.Base ()
 import Control.Monad (when, void)
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Trans.Control (MonadBaseControl)
 import Control.Monad.Trans.Reader (runReaderT)
 import Data.ByteString ()
 import Data.ConfigFile (ConfigParser)
 import Data.String (fromString)
 import Data.Text (Text, unpack)
-import Database (migrateAll)
+import Database (migrateAll, withDB, withPool, runPool)
 import Database.Persist (insert)
-import Database.Persist.Sql (ConnectionPool, SqlPersistM, runSqlPersistMPool, runMigration)
-import Database.Persist.Sqlite (withSqlitePool)
+import Database.Persist.Sql (ConnectionPool, runMigration)
 import Network.Wai (Application)
 import Network.Wai.Handler.Warp (setHost, setPort, defaultSettings, runSettings)
 import Routes
@@ -90,24 +87,6 @@ badcommand _ = putStrLn "Unknown command" >> exitFailure
 
 -------------------------
 
--- |Run a database function
-withDB :: (MonadIO m, MonadBaseControl IO m)
-       => Text          -- ^ The connection string
-       -> Int           -- ^ The pool size
-       -> SqlPersistM a -- ^ The database function
-       -> m a
-withDB connstr psize f = withPool connstr psize $ liftIO . runSqlPersistMPool f
-
--- |Run a database function which takes a connection pool
-withPool :: (MonadIO m, MonadBaseControl IO m)
-         => Text                   -- ^ The connection string
-         -> Int                    -- ^ The pool size
-         -> (ConnectionPool -> m a) -- ^ The function
-         -> m a
-withPool = withSqlitePool
-
--------------------------
-
 -- |lambdadelta, or Λδ, is the actual WAI application. It takes a
 -- request, handles it, and produces a response.
 lambdadelta :: ConfigParser -> ConnectionPool -> Application
@@ -120,7 +99,7 @@ routeRequest :: ConfigParser -> ConnectionPool -> MkUrl -> Sitemap -> Applicatio
 routeRequest conf pool mkurl path req = requestHandler `catchIOError` runError
     where requestHandler = runHandler $ handler path
           runError error = runHandler $ error500 (show error)
-          runHandler h   = runSqlPersistMPool (runReaderT h (conf, mkurl, req)) pool
+          runHandler h   = runPool (runReaderT h (conf, mkurl, req)) pool
 
 -- |Route a request to a handler
 handler :: Sitemap -> Handler
