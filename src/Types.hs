@@ -3,8 +3,9 @@
 module Types where
 
 import Control.Monad.Trans.Reader (ReaderT)
-import Database.Persist.Sql (SqlPersistM)
+import Data.ConfigFile (ConfigParser)
 import Data.Text (Text)
+import Database.Persist.Sql (SqlPersistM)
 import Network.Wai (Request, Response)
 import Routes (Sitemap)
 
@@ -14,4 +15,4 @@ type MkUrl = Sitemap -> [(Text, Maybe Text)] -> Text
 -- |Function which handles a request
 -- Todo: Should probably use SqlPersistT
 type RequestProcessor r = ReaderT (MkUrl, Request) SqlPersistM r
-type Handler = RequestProcessor Response
+type Handler = ConfigParser -> RequestProcessor Response
