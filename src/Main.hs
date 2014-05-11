@@ -3,14 +3,13 @@
 module Main where
 
 import Browse.User
-import Configuration (defaults, loadConfigFile)
+import Configuration
 import Control.Monad (when, void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Control (MonadBaseControl)
 import Control.Monad.Trans.Reader (runReaderT)
 import Data.ByteString ()
-import Data.ConfigFile (ConfigParser, get)
-import Data.Either.Utils (forceEither)
+import Data.ConfigFile (ConfigParser)
 import Data.Maybe (fromJust)
 import Data.String (fromString)
 import Data.Text (Text, unpack)
@@ -32,7 +31,7 @@ import Web.Routes.PathInfo (toPathSegments)
 
 import qualified Database as D
 
--- |Fire up the server on the default port and just listen forever for requests.
+-- |Fire up the appropriate process, depending on the command.
 main :: IO ()
 main = do args <- getArgs
 
@@ -57,11 +56,11 @@ main = do args <- getArgs
 
 -- |Run the server
 runserver :: ConfigParser -> IO ()
-runserver conf = do let host = forceEither $ get conf "server" "host"
-                    let port = forceEither $ get conf "server" "port"
+runserver conf = do let host = get' conf "server" "host"
+                    let port = get' conf "server" "port"
 
-                    let connstr  = forceEither $ get conf "database" "connection_string"
-                    let poolsize = forceEither $ get conf "database" "pool_size"
+                    let connstr  = get' conf "database" "connection_string"
+                    let poolsize = get' conf "database" "pool_size"
 
                     let settings = setHost (fromString host) $
                                    setPort port
@@ -73,14 +72,14 @@ runserver conf = do let host = forceEither $ get conf "server" "host"
 
 -- |Migrate the database
 migrate :: ConfigParser -> IO ()
-migrate conf = do let connstr  = forceEither $ get conf "database" "connection_string"
-                  let poolsize = forceEither $ get conf "database" "pool_size"
+migrate conf = do let connstr  = get' conf "database" "connection_string"
+                  let poolsize = get' conf "database" "pool_size"
                   withDB (fromString connstr) poolsize $ runMigration migrateAll
 
 -- |Populate the database with test data
 populate :: ConfigParser -> IO ()
-populate conf = do let connstr  = forceEither $ get conf "database" "connection_string"
-                   let poolsize = forceEither $ get conf "database" "pool_size"
+populate conf = do let connstr  = get' conf "database" "connection_string"
+                   let poolsize = get' conf "database" "pool_size"
                    withDB (fromString connstr) poolsize $ do
                        let board = D.Board "b" "Random" "Not like 4chan"
                        void $ insert board
@@ -110,7 +109,7 @@ withPool = withSqlitePool
 -- checking the defined routes, checking for static files, and finally
 -- failing with a 404 if nothing matches.
 lambdadelta :: ConfigParser -> ConnectionPool -> Application
-lambdadelta conf = let webroot = forceEither $ get conf "server" "web_root"
+lambdadelta conf = let webroot = get' conf "server" "web_root"
                    in handleWai (fromString webroot) . routeRequest conf
 
 -- |Route and process a request
@@ -134,7 +133,7 @@ handler path            = static $ toPathSegments path
 static :: [Text] -- ^ The file path components
        -> Handler
 static path = do conf <- askConf
-                 let fileroot = forceEither $ get conf "server" "file_root"
+                 let fileroot = get' conf "server" "file_root"
                  let fullPath = joinPath $ fileroot : map unpack path
 
                  exists <- liftIO $ doesFileExist fullPath

@@ -1,8 +1,6 @@
-module Configuration (loadConfigFile, defaults) where
+module Configuration (loadConfigFile, defaults, get') where
 
-import Data.ConfigFile (ConfigParser(..),
-                        emptyCP, interpolatingAccess, merge,
-                        readfile, readstring)
+import Data.ConfigFile
 import Data.Either.Utils (forceEither)
 import System.IO.Error (catchIOError)
 
@@ -39,3 +37,7 @@ defaults = forceEither . readstring emptyCP $ unlines
            , "connection_string = lambdadelta.sqlite"
            , "pool_size         = 10"
            ]
+
+-- |Get a value from the configuration unsafely
+get' :: Get_C a => ConfigParser -> SectionSpec -> OptionSpec -> a
+get' cp ss os = forceEither $ get cp ss os
