@@ -13,7 +13,6 @@ import Control.Monad.Trans.Control (MonadBaseControl)
 import Control.Monad.Trans.Reader (runReaderT)
 import Data.ByteString ()
 import Data.ConfigFile (ConfigParser)
-import Data.Maybe (fromJust)
 import Data.String (fromString)
 import Data.Text (Text, unpack)
 import Database (migrateAll)
@@ -21,7 +20,7 @@ import Database.Persist (insert)
 import Database.Persist.Sql (ConnectionPool, SqlPersistM, runSqlPersistMPool, runMigration)
 import Database.Persist.Sqlite (withSqlitePool)
 import Network.Wai (Application)
-import Network.Wai.Handler.Warp
+import Network.Wai.Handler.Warp (setHost, setPort, defaultSettings, runSettings)
 import Routes
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
@@ -45,19 +44,18 @@ main = do args <- getArgs
                      _ -> return $ Just defaults
 
           case config of
+            Just conf -> run (head args) conf
             Nothing -> putStrLn "Failed to read configuration" >> exitFailure
-            _ -> return ()
 
-          let command = head args
-
-          case command of
-            "runserver" -> runserver $ fromJust config
-            "migrate"   -> migrate   $ fromJust config
-            "populate"  -> populate  $ fromJust config
-            _ -> putStrLn "Unknown command" >> exitFailure
+-- |Run one of the applications, depending on the command
+run :: String -> CommandRunner
+run "runserver" = runserver
+run "migrate"   = migrate
+run "populate"  = populate
+run _           = badcommand
 
 -- |Run the server
-runserver :: ConfigParser -> IO ()
+runserver :: CommandRunner
 runserver conf = do let host = get' conf "server" "host"
                     let port = get' conf "server" "port"
 
@@ -70,21 +68,25 @@ runserver conf = do let host = get' conf "server" "host"
 
                     putStrLn $ "Starting Λδ on " ++ host ++ ":" ++ show port
                     withPool (fromString connstr) poolsize $
-                        \pool -> runSettings settings $ lambdadelta conf pool
+                        runSettings settings . lambdadelta conf
 
 -- |Migrate the database
-migrate :: ConfigParser -> IO ()
+migrate :: CommandRunner
 migrate conf = do let connstr  = get' conf "database" "connection_string"
                   let poolsize = get' conf "database" "pool_size"
                   withDB (fromString connstr) poolsize $ runMigration migrateAll
 
 -- |Populate the database with test data
-populate :: ConfigParser -> IO ()
+populate :: CommandRunner
 populate conf = do let connstr  = get' conf "database" "connection_string"
                    let poolsize = get' conf "database" "pool_size"
                    withDB (fromString connstr) poolsize $ do
                        let board = D.Board "b" "Random" "Not like 4chan"
                        void $ insert board
+
+-- |Fail with an error
+badcommand :: CommandRunner
+badcommand _ = putStrLn "Unknown command" >> exitFailure
 
 -------------------------
 
@@ -107,9 +109,7 @@ withPool = withSqlitePool
 -------------------------
 
 -- |lambdadelta, or Λδ, is the actual WAI application. It takes a
--- request, handles it, and produces a response. This just consists of
--- checking the defined routes, checking for static files, and finally
--- failing with a 404 if nothing matches.
+-- request, handles it, and produces a response.
 lambdadelta :: ConfigParser -> ConnectionPool -> Application
 lambdadelta conf = let webroot = get' conf "server" "web_root"
                    in handleWai (fromString webroot) . routeRequest conf
@@ -117,10 +117,10 @@ lambdadelta conf = let webroot = get' conf "server" "web_root"
 -- |Route and process a request
 -- Todo: use SqlPersistT?
 routeRequest :: ConfigParser -> ConnectionPool -> MkUrl -> Sitemap -> Application
-routeRequest conf pool mkurl path req = runSqlPersistMPool requestHandler pool `catchIOError` \error -> runSqlPersistMPool (runError error) pool
+routeRequest conf pool mkurl path req = requestHandler `catchIOError` runError
     where requestHandler = runHandler $ handler path
           runError error = runHandler $ error500 (show error)
-          runHandler h   = runReaderT h (conf, mkurl, req)
+          runHandler h   = runSqlPersistMPool (runReaderT h (conf, mkurl, req)) pool
 
 -- |Route a request to a handler
 handler :: Sitemap -> Handler

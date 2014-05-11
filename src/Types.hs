@@ -17,6 +17,9 @@ type MkUrl = Sitemap -> [(Text, Maybe Text)] -> Text
 type RequestProcessor r = ReaderT (ConfigParser, MkUrl, Request) SqlPersistM r
 type Handler = RequestProcessor Response
 
+-- |Function which runs an IO command (eg, runserver)
+type CommandRunner = ConfigParser -> IO ()
+
 -- |Get the configuration from a RequestProcessor
 askConf :: RequestProcessor ConfigParser
 askConf = asks $ \(conf, _, _) -> conf
