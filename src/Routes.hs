@@ -2,14 +2,9 @@
 
 module Routes where
 
-import Control.Applicative
-
 import Data.Text (Text, unpack, pack)
-
 import Network.Wai
-
 import Text.Read (readMaybe)
-
 import Web.Routes.PathInfo
 
 -- |The possible routes on the imageboard
@@ -56,4 +51,3 @@ instance PathInfo Sitemap where
               parse _              = fail
 
               fail = Left "Couldn't parse"
-
