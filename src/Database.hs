@@ -2,7 +2,6 @@
 
 module Database where
 
-import Database.Persist
 import Database.Persist.TH
 import Data.Time
 import Data.Text (Text)
