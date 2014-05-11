@@ -12,15 +12,13 @@ import Database.Persist (insert)
 import Database.Persist.Sql (ConnectionPool, SqlPersistM, runSqlPersistMPool, runMigration)
 import Database.Persist.Sqlite (withSqlitePool)
 import Data.Text (Text)
-import Network.HTTP.Types.Status
 import Network.Wai
 import Network.Wai.Handler.Warp
 import Routes
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import Types
-import Web.Routes.PathInfo
-import Web.Routes.Site
+import Web.Routes.Wai (handleWai)
 
 import qualified Database as D
 
@@ -79,17 +77,19 @@ withPool connstr f = withSqlitePool connstr 10 f
 -- Todo: get the proper application root
 -- Todo: handle static files
 lambdadelta :: ConnectionPool -> Application
-lambdadelta pool req = case handle req of
-                         Left _ -> return $ responseLBS notFound404 [] ""
-                         Right resp -> runSqlPersistMPool resp pool
-    where handle req = runSite "http://localhost:3000" (mkSitePI $ flip routeRequest req) $ pathInfo req
+lambdadelta = handleWai "http://localhost:3000" . routeRequest
 
--- |The main router
--- Todo: would web-routes-wai be useful?
+-- |Route and process a request
 -- Todo: use SqlPersistT?
-routeRequest :: MkUrl -> Request -> Sitemap -> SqlPersistM Response
-routeRequest mkurl req Index           = runReaderT index (mkurl, req)
-routeRequest mkurl req (Board b p)     = runReaderT (board b p) (mkurl, req)
-routeRequest mkurl req (Thread b t)    = runReaderT (thread b t) (mkurl, req)
-routeRequest mkurl req (PostThread b)  = runReaderT (postThread b) (mkurl, req)
-routeRequest mkurl req (PostReply b t) = runReaderT (postReply b t) (mkurl, req)
+routeRequest :: ConnectionPool -> MkUrl -> Sitemap -> Application
+routeRequest pool mkurl path req = runSqlPersistMPool requestHandler pool
+    where requestHandler = runReaderT (handler path) (mkurl, req)
+
+-- |Route a request to a handler
+-- Todo: handle static files
+handler :: Sitemap -> Handler
+handler Index           = index
+handler (Board b p)     = board b p
+handler (Thread b t)    = thread b t
+handler (PostThread b)  = postThread b
+handler (PostReply b t) = postReply b t
