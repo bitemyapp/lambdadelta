@@ -18,15 +18,16 @@ import Database (migrateAll)
 import Database.Persist (insert)
 import Database.Persist.Sql (ConnectionPool, SqlPersistM, runSqlPersistMPool, runMigration)
 import Database.Persist.Sqlite (withSqlitePool)
-import Network.Wai
+import Network.HTTP.Types.Status (notFound404)
+import Network.Wai (Application, responseLBS)
 import Network.Wai.Handler.Warp
 import Routes
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.FilePath.Posix (joinPath)
 import Types
-import Web.Routes.Wai (handleWai)
-import Web.Routes.PathInfo (toPathSegments)
+import Web.Routes.Wai (handleWaiError)
+import Web.Routes.PathInfo (toPathInfoParams, toPathSegments, fromPathInfo)
 
 import qualified Database as D
 
@@ -109,7 +110,7 @@ withPool = withSqlitePool
 -- failing with a 404 if nothing matches.
 lambdadelta :: ConfigParser -> ConnectionPool -> Application
 lambdadelta conf = let webroot = get' conf "server" "web_root"
-                   in handleWai (fromString webroot) . routeRequest conf
+                   in handleWaiError toPathInfoParams fromPathInfo (fromString webroot) error404 . routeRequest conf
 
 -- |Route and process a request
 -- Todo: use SqlPersistT?
@@ -132,3 +133,7 @@ handler path            = static $ toPathSegments path
 static :: [Text] -- ^ The file path components
        -> Handler
 static path = respondFile . joinPath $ map unpack path
+
+-- |A 404 error
+error404 :: String -> Application
+error404 _ _ = return $ responseLBS notFound404 [] "File not found"
