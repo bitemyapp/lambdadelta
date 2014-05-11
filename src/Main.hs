@@ -117,7 +117,7 @@ lambdadelta conf = let webroot = forceEither $ get conf "server" "web_root"
 -- Todo: use SqlPersistT?
 routeRequest :: ConfigParser -> ConnectionPool -> MkUrl -> Sitemap -> Application
 routeRequest conf pool mkurl path req = runSqlPersistMPool requestHandler pool
-    where requestHandler = runReaderT (handler path conf) (mkurl, req)
+    where requestHandler = runReaderT (handler path) (conf, mkurl, req)
 
 -- |Route a request to a handler
 handler :: Sitemap -> Handler
@@ -133,10 +133,11 @@ handler path            = static $ toPathSegments path
 -- server should really do this.
 static :: [Text] -- ^ The file path components
        -> Handler
-static path conf = do let fileroot = forceEither $ get conf "server" "file_root"
-                      let fullPath = joinPath $ fileroot : map unpack path
+static path = do conf <- askConf
+                 let fileroot = forceEither $ get conf "server" "file_root"
+                 let fullPath = joinPath $ fileroot : map unpack path
 
-                      exists <- liftIO $ doesFileExist fullPath
-                      return $ if exists
-                               then responseFile ok200 [] fullPath Nothing
-                               else responseLBS notFound404 [] "File not found"
+                 exists <- liftIO $ doesFileExist fullPath
+                 return $ if exists
+                          then responseFile ok200 [] fullPath Nothing
+                          else responseLBS notFound404 [] "File not found"

@@ -19,20 +19,20 @@ import qualified Database as D
 -- Todo: Figure out how to nicely handle the html -> response bit
 -- Todo: Figure out what the second argument of mkurl is
 index :: Handler
-index conf = do boards <- selectList ([] :: [Filter D.Board]) []
-                let html = T.index [map (\(Entity _ val) -> val) boards]
-                mkurl <- asks fst
-                let builder = renderHtmlBuilder $ html $ \a -> \b -> mkurl a []
-                return $ responseBuilder ok200 [] builder
+index = do boards <- selectList ([] :: [Filter D.Board]) []
+           let html = T.index [map (\(Entity _ val) -> val) boards]
+           mkurl <- askMkUrl
+           let builder = renderHtmlBuilder $ html $ \a -> \b -> mkurl a []
+           return $ responseBuilder ok200 [] builder
 
 board :: Text -> Maybe Int -> Handler
-board board page conf = return $ responseLBS ok200 [] "board"
+board board page = return $ responseLBS ok200 [] "board"
 
 thread :: Text -> Int -> Handler
-thread board thread conf = return $ responseLBS ok200 [] "thread"
+thread board thread = return $ responseLBS ok200 [] "thread"
 
 postThread :: Text -> Handler
-postThread board conf = return $ responseLBS ok200 [] "post thread"
+postThread board = return $ responseLBS ok200 [] "post thread"
 
 postReply :: Text -> Int -> Handler
-postReply board thread conf = return $ responseLBS ok200 [] "post reply"
+postReply board thread = return $ responseLBS ok200 [] "post reply"
