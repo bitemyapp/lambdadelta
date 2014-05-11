@@ -3,7 +3,6 @@
 module Routes where
 
 import Data.Text (Text, unpack, pack)
-import Network.Wai
 import Text.Read (readMaybe)
 import Web.Routes.PathInfo
 
