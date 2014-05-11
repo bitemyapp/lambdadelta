@@ -5,12 +5,11 @@ module Main where
 import Browse (respondFile)
 import Browse.User
 import Browse.Error (error404, error500)
-import Configuration (loadConfigFile, defaults, get')
+import Configuration (ConfigParser, loadConfigFile, defaults, get')
 import Control.Exception.Base ()
 import Control.Monad (when, void)
 import Control.Monad.Trans.Reader (runReaderT)
 import Data.ByteString ()
-import Data.ConfigFile (ConfigParser)
 import Data.String (fromString)
 import Data.Text (Text, unpack)
 import Database (migrateAll, withDB, withPool, runPool)

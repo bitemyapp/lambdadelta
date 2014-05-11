@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Configuration where
+module Configuration (ConfigParser,
+                      loadConfigFile, defaults,
+                      get, get', conf, conf') where
 
 import Control.Monad.Error.Class (MonadError)
 import Data.ConfigFile
