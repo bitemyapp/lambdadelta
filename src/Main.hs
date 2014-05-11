@@ -31,6 +31,7 @@ import qualified Database as D
 -- |Fire up the appropriate process, depending on the command.
 main :: IO ()
 main = do args <- getArgs
+          let command = head args
 
           when (length args < 1) $
                putStrLn "Expected at least one argument" >> exitFailure
@@ -40,8 +41,10 @@ main = do args <- getArgs
                      _ -> return $ Just defaults
 
           case config of
-            Just conf -> run (head args) conf
+            Just conf -> run command conf
             Nothing -> putStrLn "Failed to read configuration" >> exitFailure
+
+-------------------------
 
 -- |Run one of the applications, depending on the command
 run :: String -> CommandRunner
