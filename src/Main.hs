@@ -93,25 +93,25 @@ badcommand _ = putStrLn "Unknown command" >> exitFailure
 -- request, handles it, and produces a response.
 lambdadelta :: ConfigParser -> ConnectionPool -> Application
 lambdadelta conf = let webroot = get' conf "server" "web_root"
-                   in handleWai (fromString webroot) . routeRequest conf
+                   in handleWai (fromString webroot) . process conf
 
 -- |Route and process a request
 -- Todo: use SqlPersistT?
-routeRequest :: ConfigParser -> ConnectionPool -> MkUrl -> Sitemap -> Application
-routeRequest conf pool mkurl path req = requestHandler `catchIOError` runError
-    where requestHandler = runHandler $ handler path
+process :: ConfigParser -> ConnectionPool -> MkUrl -> Sitemap -> Application
+process conf pool mkurl path req = requestHandler `catchIOError` runError
+    where requestHandler = runHandler $ route path
           runError error = runHandler $ error500 (show error)
           runHandler h   = runPool (runReaderT h (conf, mkurl, req)) pool
 
 -- |Route a request to a handler
-handler :: Sitemap -> Handler
-handler Index           = index
-handler (Board b p)     = board b p
-handler (Thread b t)    = thread b t
-handler (PostThread b)  = postThread b
-handler (PostReply b t) = postReply b t
-handler Error404        = error404 "File not found"
-handler path            = static $ toPathSegments path
+route :: Sitemap -> Handler
+route Index           = index
+route (Board b p)     = board b p
+route (Thread b t)    = thread b t
+route (PostThread b)  = postThread b
+route (PostReply b t) = postReply b t
+route Error404        = error404 "File not found"
+route path            = static $ toPathSegments path
 
 -- |Process a request for a static file
 -- This isn't the best way to serve static files, your actual web
