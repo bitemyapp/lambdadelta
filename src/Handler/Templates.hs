@@ -12,6 +12,7 @@ import Data.Text.Encoding (decodeUtf8)
 import Data.Time.Format (formatTime)
 import Database hiding (Board, File, Post)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
+import Numeric (showGFloat)
 import Routes
 import System.Locale (defaultTimeLocale)
 import Text.Hamlet (HtmlUrl, hamletFile)
@@ -112,7 +113,7 @@ replyForm board (TThread _ op _ _ _) = let thread = Just op
 -- |Turn a filesize (in bytes) into a nice string
 niceSize :: D.File -> Text
 niceSize image = let (sz, unit) = niceSize' (fromIntegral $ fileSize image) "B"
-                 in pack $ show sz ++ unit
+                 in pack $ showGFloat (Just 2) sz unit
 
     where niceSize' sz "B"  | sz > 1024 = niceSize' (sz / 1024.0) "kB"
                             | otherwise = (sz, "B")
