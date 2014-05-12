@@ -23,12 +23,13 @@ import Data.Maybe (isJust, fromJust, fromMaybe)
 import Database
 import Database.Persist ((==.), (=.),  get, insert, selectList, update)
 import Graphics.ImageMagick.MagickWand (getImageHeight, getImageWidth, magickWand, readImageBlob, withMagickWandGenesis)
-import Network.Wai.Parse (FileInfo(..), lbsBackEnd, parseRequestBody)
+import Network.Wai.Parse (FileInfo(..), Param, lbsBackEnd, parseRequestBody)
 import System.FilePath.Posix (joinPath, takeExtension)
 import Types (RequestProcessor, askReq)
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
+import qualified Network.Wai.Parse as W
 
 -- |Post a new thread, returning the file and post IDs on success.
 -- Todo: Take the board name, and produce a nice error when it doesn't
@@ -36,10 +37,10 @@ import qualified Data.ByteString.Lazy as BL
 newThread :: BoardId -- ^ The board
           -> ErrorT String RequestProcessor (FileId, PostId)
 newThread board = do
-  -- If this pattern match fails, something has gone very wrong in
-  -- handlePostForm.
-  (Just f, p) <- handlePostForm board Nothing
-  return (f, p)
+  thread <- handlePostForm board Nothing
+  case thread of
+    (Just f, p) -> return (f, p)
+    (Nothing, _) -> throwError "The impossible has happened"
 
 -- |Post a new reply, returning the file (if it exists) and post IDs
 -- on success.
@@ -83,16 +84,15 @@ handlePostForm boardId threadId = do
                          Nothing -> threadError comment file
 
   -- All looks good, construct a post, save the file, and bump the thread.
-  lift $ commitPost boardId threadId
+  lift $ commitPost boardId threadId params files
 
 -- |Commit a new post and possible file upload to the database
-commitPost :: BoardId -- ^ The board
-           -> Maybe PostId -- ^ The OP
+commitPost :: BoardId                -- ^ The board
+           -> Maybe PostId           -- ^ The OP
+           -> [Param]                -- ^ The parameters
+           -> [W.File BL.ByteString] -- ^ The files
            -> RequestProcessor (Maybe FileId, PostId)
-commitPost boardId threadId = do
-  request <- askReq
-  (params, files) <- liftIO $ parseRequestBody lbsBackEnd request
-
+commitPost boardId threadId params files = do
   let name     = decodeUtf8 <$> lookup "name"     params
   let email    = decodeUtf8 <$> lookup "email"    params
   let subject  = decodeUtf8 <$> lookup "subject"  params
