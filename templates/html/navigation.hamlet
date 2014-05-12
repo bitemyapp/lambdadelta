@@ -12,9 +12,13 @@
           <a href="@{Board (boardName board) 1}" title="/#{boardName board}/ - #{boardTitle board}">#{boardName board}
   $maybe (board, currentPage, numPages) <- board
     <ol class="pages">
-      $forall page <- pageList numPages
-        $if page == currentPage
-          <li class="selected">#{page}
-        $else
-          <li>
-            <a href="@{Board (boardName board) page}">#{page}
+      $if numPages == 0
+        $forall page <- pageList numPages
+          $if page == currentPage
+            <li class="selected">#{page}
+          $else
+            <li>
+              <a href="@{Board (boardName board) page}">#{page}
+      $else
+        <li>
+          <a href="@{Board (boardName board) 1}">return
