@@ -5,7 +5,7 @@ module Browse.User (index, board, thread, Browse.User.postThread, postReply) whe
 import Browse
 import Browse.Error (error404)
 import Configuration (conf')
-import Data.Maybe (fromJust, fromMaybe, isNothing)
+import Data.Maybe (catMaybes, fromJust, fromMaybe, isNothing)
 import Database
 import Database.Persist
 import Data.Text (Text)
@@ -16,19 +16,17 @@ import qualified Database as D
 
 -- |Render the index page
 -- Todo: Recent images/posts
--- Todo: Handle board groups properly
 index :: Handler
-index = do boards <- fmap (fmap unentity) $ selectList ([] :: [Filter D.Board]) []
-           html200Response $ T.index [boards]
+index = do boardlisting <- getBoardListing
+           html200Response $ T.index boardlisting
 
 -- |Render a board index page
--- Todo: Handle board groups properly
 -- Todo: Board-specific config
 board :: Text -> Int -> Handler
 board board page = do summary_size     <- conf' "board" "summary_size"
                       threads_per_page <- conf' "board" "threads_per_page"
 
-                      boards <- fmap (fmap unentity) $ selectList ([] :: [Filter D.Board]) []
+                      boardlisting <- getBoardListing
                       maybeBoard <- getBy $ UniqueBoardName board
 
                       case maybeBoard of
@@ -40,7 +38,7 @@ board board page = do summary_size     <- conf' "board" "summary_size"
                                                     , OffsetBy $ (page - 1) * threads_per_page]
                                pages <- getNumPages boardid
                                threads' <- mapM (getThread summary_size) threads
-                               html200Response $ T.board board [boards] page pages threads'
+                               html200Response $ T.board board boardlisting page pages threads'
 
 thread :: Text -> Int -> Handler
 thread board thread = utf8200Response "thread"
@@ -52,6 +50,16 @@ postReply :: Text -> Int -> Handler
 postReply board thread = utf8200Response "post reply"
 
 -------------------------
+
+-- |Generate the board listing
+getBoardListing :: RequestProcessor [[D.Board]]
+getBoardListing = do board_listing <- conf' "board" "board_listing"
+                     listing <- mapM getBoardList board_listing
+                     return $ filter ((0/=) . length) listing
+
+    where getBoardList :: [Text] -> RequestProcessor [D.Board]
+          getBoardList boards = do listing <- mapM (getBy . UniqueBoardName) boards
+                                   return $ map unentity $ catMaybes listing
 
 -- |Get the number of pages a board has
 getNumPages :: BoardId -- ^ The board
@@ -83,9 +91,7 @@ getThread limit (Entity opid op) =
                           [ Desc PostUpdated
                           , LimitTo limit
                           ]
-       posts' <- (mapM getPostImage posts) :: RequestProcessor [(Maybe File, Post)]
-
-       let posts'' = posts' :: [(Maybe File, Post)]
+       posts' <- mapM getPostImage posts
 
        let omittedReplies = replies - length posts'
        let omittedImages  = imageReplies - length (filter (not . isNothing . fst) posts')
@@ -96,7 +102,7 @@ getThread limit (Entity opid op) =
 -- |Get the image for a post
 getPostImage :: Entity Post -- ^ The post
              -> RequestProcessor (Maybe File, Post)
-getPostImage (Entity postid post) = case postFile post of
-                                      Nothing -> return (Nothing, post)
-                                      Just fileid -> do file <- get fileid
-                                                        return (file, post)
+getPostImage (Entity _ post) = case postFile post of
+                                 Nothing -> return (Nothing, post)
+                                 Just fileid -> do file <- get fileid
+                                                   return (file, post)

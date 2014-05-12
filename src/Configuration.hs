@@ -42,6 +42,7 @@ defaults = forceEither . readstring emptyCP $ unlines
            , "connection_string = lambdadelta.sqlite"
            , "pool_size         = 10"
            , "[board]"
+           , "board_listing = [[\"b\"]]"
            , "summary_size = 5"
            , "threads_per_page = 10"
            , "maximum_pages = 10"
