@@ -21,10 +21,12 @@ import Data.Time.Clock (getCurrentTime)
 import Data.Hash.MD5 (Str(..), md5s)
 import Data.Maybe (isJust, fromJust, fromMaybe)
 import Database
-import Database.Persist ((==.), (=.),  get, insert, selectList, update)
+import Database.Persist
 import Graphics.ImageMagick.MagickWand
 import Network.Wai.Parse (FileInfo(..), Param, lbsBackEnd, parseRequestBody)
+import System.Directory (removeFile)
 import System.FilePath.Posix (joinPath, takeExtension)
+import System.IO.Error (catchIOError)
 import Types (RequestProcessor, askReq)
 
 import qualified Data.ByteString as B
@@ -37,10 +39,27 @@ import qualified Network.Wai.Parse as W
 newThread :: BoardId -- ^ The board
           -> ErrorT String RequestProcessor (FileId, PostId)
 newThread board = do
-  thread <- handlePostForm board Nothing
-  case thread of
-    (Just f, p) -> return (f, p)
-    (Nothing, _) -> throwError "The impossible has happened"
+  (Just f, p) <- handlePostForm board Nothing
+
+  -- Purge any threads which fell off the back page
+  threads_per_page <- lift $ conf' "board" "threads_per_page"
+  maximum_pages <- lift $ conf' "board" "maximum_pages"
+  lastThread <- lift $ selectFirst [ PostThread ==. Nothing
+                                  , PostBoard ==. board]
+                                  [ OffsetBy $ (maximum_pages - 1) * threads_per_page
+                                  , LimitTo 1]
+
+  -- If this is a Nothing, the board isn't full yet, so we don't need
+  -- to do anything.
+  lift $ case lastThread of
+    Just (Entity _ thread) -> do
+      threads <- selectList [ PostThread ==. Nothing
+                           , PostBoard ==. board
+                           , PostUpdated >. postUpdated thread] []
+      mapM_ purge threads
+    Nothing -> return ()
+
+  return (f, p)
 
 -- |Post a new reply, returning the file (if it exists) and post IDs
 -- on success.
@@ -210,6 +229,44 @@ bumpThread threadId = do
   when (replies < bump_limit) $ do
     now <- liftIO getCurrentTime
     update threadId [PostUpdated =. now]
+
+-------------------------
+
+-- |Purge a thread and all its posts
+purge :: Entity Post -- ^ The thread
+      -> RequestProcessor ()
+purge (Entity threadId op) = do
+  posts <- selectList [ PostBoard ==. postBoard op
+                     , PostThread ==. Just threadId] []
+
+  mapM_ purgePost posts
+  purgePost $ Entity threadId op
+
+-- |Delete a post and its associated file (if any)
+purgePost :: Entity Post -- ^ The post
+          -> RequestProcessor ()
+purgePost (Entity postId post) = do
+  board <- fromJust <$> get (postBoard post)
+
+  -- Delete the file and thumbnail
+  case postFile post of
+    Just fid -> do
+      file <- get fid
+      case file of
+        Just f -> do
+          fileroot <- conf' "server" "file_root"
+
+          let fname = joinPath [fileroot, unpack $ boardName board, "src", unpack $ Database.fileName f]
+          let thumb = joinPath [fileroot, unpack $ boardName board, "thumb", unpack $ Database.fileName f]
+
+          liftIO $ removeFile fname `catchIOError` (\_ -> return ())
+          liftIO $ removeFile thumb `catchIOError` (\_ -> return ())
+        _ -> return ()
+    _ -> return ()
+
+  -- Delete the post
+  delete postId
+  return ()
 
 -------------------------
 
