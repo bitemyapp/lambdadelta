@@ -9,7 +9,7 @@
 -->
 
 <div .thread id="thread_#{postNumber op}">
-  <p class="fileinfo"> File:
+  <p class="fileinfo"> File: 
     <a href="@{File (boardName board) (fileName image)}">#{fileName image}
     <span>
       (#{niceSize image}, #{fileWidth image}x#{fileHeight image}, #{fileOrigname image})
@@ -26,6 +26,8 @@
             #{postName op}
         $else
           #{postName op}
+      <span .when>
+        #{formatTime defaultTimeLocale "%F (%a) %X" (postTime op)}
       <a href="@{Thread (boardName board) (postNumber op)}##{postNumber op}">No.
       <a href="@{Thread (boardName board) (postNumber op)}#q#{postNumber op}">#{postNumber op}
       $if replyButton
@@ -51,10 +53,10 @@
     <div class="post reply" id="reply_#{postNumber post}">
       $maybe image <- image
         <p class="fileinfo">
-          File:
+          File: 
           <a href="@{File (boardName board) (fileName image)}">#{fileName image}
           <span>
-            (#{niceSize image} KB, #{fileWidth image}x#{fileHeight image}, #{fileOrigname image})
+            (#{niceSize image}, #{fileWidth image}x#{fileHeight image}, #{fileOrigname image})
         <a href="@{File (boardName board) (fileName image)}">
           <img src="@{File (boardName board) (fileName image)}">
       <p .meta>
@@ -67,6 +69,8 @@
               #{postName post}
           $else
             #{postName post}
+        <span .when>
+          #{formatTime defaultTimeLocale "%F (%a) %X" (postTime post)}
         <a href="@{Thread (boardName board) (postNumber post)}##{postNumber post}">No.
         <a href="@{Thread (boardName board) (postNumber post)}#q#{postNumber post}">#{postNumber post}
       <div .body>

@@ -19,6 +19,7 @@ Post
     -- If this is Nothing, this post is the start of a new thread.
     thread  PostId Maybe
 
+    time UTCTime default=CURRENT_TIME
     -- This is normally the created time, but for a thread it is the time it
     -- was last bumped.
     updated UTCTime default=CURRENT_TIME

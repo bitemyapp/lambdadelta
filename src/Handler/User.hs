@@ -52,7 +52,8 @@ thread board thread = do boardlisting <- getBoardListing
                            Just (Entity boardid board) -> do
                              maybeThread <- selectFirst [ PostBoard  ==. boardid
                                                        , PostThread ==. Nothing
-                                                       , PostNumber ==. thread] []
+                                                       , PostNumber ==. thread]
+                                                       [ Asc PostTime]
                              case maybeThread of
                                Nothing -> error404 "No such thread"
                                Just post -> do

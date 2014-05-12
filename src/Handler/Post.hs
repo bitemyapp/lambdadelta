@@ -217,7 +217,7 @@ handleNewPost boardId threadId name email subject comment fileId password = do
   let comment'  = fromMaybe "" comment
   let password' = fromMaybe "" password
 
-  insert $ Post number boardId threadId updated fileId name' email' subject' comment' password'
+  insert $ Post number boardId threadId updated updated fileId name' email' subject' comment' password'
 
 -- |Bump a thread if it's below the bump limit
 bumpThread :: PostId -- ^ The OP
