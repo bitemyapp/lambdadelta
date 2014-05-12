@@ -7,7 +7,7 @@
  - replies :: [(Maybe File, Post)], the replies
 -->
 
-<div id="thread_#{postNumber op}">
+<div .thread id="thread_#{postNumber op}">
   <p class="fileinfo"> File:
     <a href="@{File (boardName board) (fileName image)}">#{fileName image}
     <span>
