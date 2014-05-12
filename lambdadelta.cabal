@@ -61,6 +61,7 @@ executable lambdadelta
                      , Handler.Error
                      , Handler.User
                      , Handler.Templates
+                     , Handler.Post
                      , Configuration
 
   ghc-options: -Wall  

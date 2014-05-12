@@ -4,25 +4,15 @@ module Handler.User (index, board, thread, Handler.User.postThread, postReply) w
 
 import Handler
 import Handler.Error (error400, error404)
-import Control.Monad.IO.Class (liftIO)
+import Handler.Post (newThread, newReply)
 import Configuration (conf')
-import Data.Char (chr)
-import Data.Hash.MD5 (Str(..), md5s)
-import Data.Maybe (catMaybes, fromJust, fromMaybe, isJust, isNothing)
-import Data.Text.Encoding (decodeUtf8)
-import Data.Time.Clock (getCurrentTime)
+import Data.Maybe (catMaybes, fromJust, isJust)
 import Database
 import Database.Persist
 import Data.Text (Text)
-import Graphics.ImageMagick.MagickWand
-import Network.Wai.Parse
-import System.FilePath.Posix (joinPath, takeExtension)
 import Types
 
 import qualified Handler.Templates as T
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy.Char8 as L
-import qualified Data.Text as Te
 import qualified Database as D
 import qualified Routes as R
 
@@ -79,7 +69,7 @@ postThread board = do
 
   case maybeBoard of
     Just (Entity boardId _) -> do
-      result <- handlePostForm boardId Nothing
+      result <- newThread boardId
       case result of
         Just _ -> redirect $ R.Board board 1
         Nothing -> error400 "Failed to create post."
@@ -96,137 +86,12 @@ postReply board thread = do
       maybeThread <- getBy $ UniquePostID thread boardId
       case maybeThread of
         Just (Entity threadId _) -> do
-          result <- handlePostForm boardId $ Just threadId
+          result <- newReply boardId threadId
           case result of
             Just _ -> redirect $ R.Board board 1
             Nothing -> error400 "Failed to create post"
         Nothing -> error404 "No such thread"
     Nothing -> error404 "No such board"
-
--------------------------
-
--- |Handle a post form, saving the post (and optional file) into the
--- database, returning the IDs. This returns Nothing if something went
--- wrong.
--- Todo: Use digestive-functors
--- Todo: Store temporary files on disk, not in memory
--- Todo: tripcodes - come up with a good way for the name field to
--- modify the post
--- Todo: sage/noko/dice - come up with a good way for the email field
--- to modify the response and post
-
-handlePostForm :: D.BoardId      -- ^ The board
-               -> Maybe D.PostId -- ^ The OP
-               -> RequestProcessor (Maybe (Maybe FileId, PostId))
-handlePostForm boardId threadId = do
-  request <- askReq
-  (params, files) <- liftIO $ parseRequestBody lbsBackEnd request
-
-  let name     = fmap decodeUtf8 $ lookup "name"     params
-  let email    = fmap decodeUtf8 $ lookup "email"    params
-  let subject  = fmap decodeUtf8 $ lookup "subject"  params
-  let comment  = fmap decodeUtf8 $ lookup "comment"  params
-  let file     = lookup "file" files
-  let spoiler  = fmap decodeUtf8 $ lookup "spoiler"  params
-  let password = fmap decodeUtf8 $ lookup "password" params
-
-  -- If this is a new thread, there must be both an image and a comment.
-  -- If this is a reply, there must be at least one of an image or a comment.
-  let isValidPost = case threadId of
-        Just {} -> hasValue comment || hasContent file
-        Nothing -> hasValue comment && hasContent file
-  
-  if isValidPost
-    then do
-    -- All looks good, construct a post, save the fail, and bump the thread.
-    board <- fmap fromJust $ get boardId
-    fileId <- handleFileUpload board file $ isJust spoiler
-    postId <- handleNewPost boardId threadId name email subject comment fileId password
-
-    -- bump the thread if there is a thread to bump
-    return () `maybe` bumpThread $ threadId
-
-    -- return the relevant information
-    return $ Just (fileId, postId)
-
-    -- post was not valid, return Nothing
-    else return Nothing
-           
--- |Check if a value is set and is nonempty
-hasValue :: Maybe Text -> Bool
-hasValue Nothing = False
-hasValue (Just t) = not $ Te.null (Te.strip t)
-
--- |Check if a file is nonempty
-hasContent :: Maybe (FileInfo L.ByteString) -> Bool
-hasContent Nothing = False
-hasContent (Just (FileInfo _ _ c)) = not $ L.null c
-
--- |Upload a possible file, returning the ID
--- Todo: Generate thumbnails
--- Todo: Implement maximum file sizes
-handleFileUpload :: D.Board -- ^ The board
-                 -> Maybe (FileInfo L.ByteString) -- ^ The file
-                 -> Bool -- ^ Whether it is spoilered
-                 -> RequestProcessor (Maybe FileId)
-handleFileUpload board (Just (FileInfo fname _ content)) spoiler = do
-  -- Construct the target file path
-    fileroot <- conf' "server" "file_root"
-    let fname' = map (chr . fromIntegral) $ B.unpack fname
-    let fnamehash = md5s (Str fname') ++ takeExtension fname'
-    let path = joinPath [fileroot, Te.unpack $ boardName board, "src", fnamehash]
-    let size = fromIntegral $ L.length content
-
--- I am saddened that this is how to check if a file was
--- uploaded. Also, this should probably be moved to handlePostForm
--- when I refactor this horrible mess.
-    if size == 0
-    then return Nothing
-    else do
-      -- Save the file
-      liftIO $ L.writeFile path content
-
-      -- Get its dimensions
-      (width, height) <- liftIO . withMagickWandGenesis $ do
-        (_, w) <- magickWand
-        readImageBlob w (B.concat $ L.toChunks content)
-        width  <- getImageWidth w
-        height <- getImageHeight w
-
-        return (width, height)
-
-      fmap Just . insert $ D.File (Te.pack fnamehash) (Te.pack fname') size width height spoiler
-
-handleFileUpload _ Nothing _ = return Nothing
-
--- |Construct and insert a new post into the database
-handleNewPost :: D.BoardId      -- ^ The board
-              -> Maybe D.PostId -- ^ The OP (if a reply)
-              -> Maybe Text     -- ^ The name
-              -> Maybe Text     -- ^ The email
-              -> Maybe Text     -- ^ The subject
-              -> Maybe Text     -- ^ The comment
-              -> Maybe FileId   -- ^ The file ID
-              -> Maybe Text     -- ^ The password
-              -> RequestProcessor PostId
-handleNewPost boardId threadId name email subject comment fileId password = do
-    number  <- fmap ((+1) . length) $ selectList [PostBoard ==. boardId] []
-    updated <- liftIO $ getCurrentTime
-
-    let name'     = fromMaybe "" name
-    let email'    = fromMaybe "" email
-    let subject'  = fromMaybe "" subject
-    let comment'  = fromMaybe "" comment
-    let password' = fromMaybe "" password
-
-    insert $ D.Post number boardId threadId updated fileId name' email' subject' comment' password'
-
--- |Bump a thread
-bumpThread :: D.PostId -- ^ The OP
-           -> RequestProcessor ()
-bumpThread threadId = do now <- liftIO $ getCurrentTime
-                         update threadId [PostUpdated =. now]
-                         return ()
 
 -------------------------
 
