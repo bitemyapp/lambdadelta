@@ -86,8 +86,22 @@ postThread board = do
 
     Nothing -> error404 "No such board"
 
+-- | Handle a request to post a new reply
+-- Todo: see todos for postThread
 postReply :: Text -> Int -> Handler
-postReply board thread = utf8200Response "post reply"
+postReply board thread = do
+  maybeBoard  <- getBy $ UniqueBoardName board
+  case maybeBoard of
+    Just (Entity boardId _) -> do
+      maybeThread <- getBy $ UniquePostID thread boardId
+      case maybeThread of
+        Just (Entity threadId _) -> do
+          result <- handlePostForm boardId $ Just threadId
+          case result of
+            Just _ -> redirect $ R.Board board 1
+            Nothing -> error400 "Failed to create post"
+        Nothing -> error404 "No such thread"
+    Nothing -> error404 "No such board"
 
 -------------------------
 
@@ -118,12 +132,12 @@ handlePostForm boardId threadId = do
 
   -- If this is a new thread, there must be both an image and a
   -- comment
-  if isJust threadId && (not (hasValue comment) || not (hasContent file))
+  if isNothing threadId && (not (hasValue comment) || not (hasContent file))
   then return Nothing
 
   -- If this is a reply, there must be at least one of an image or a
   -- comment
-  else if isNothing threadId && not (hasValue comment) && not (hasContent file)
+  else if isJust threadId && not (hasValue comment) && not (hasContent file)
        then return Nothing
 
   -- All looks good, construct a post, save the file, and bump the
@@ -195,7 +209,7 @@ handleNewPost :: D.BoardId      -- ^ The board
               -> Maybe Text     -- ^ The password
               -> RequestProcessor PostId
 handleNewPost boardId threadId name email subject comment fileId password = do
-    number  <- fmap ((+1) . length) $ selectList [PostThread ==. threadId] []
+    number  <- fmap ((+1) . length) $ selectList [PostBoard ==. boardId] []
     updated <- liftIO $ getCurrentTime
 
     let name'     = fromMaybe "" name
