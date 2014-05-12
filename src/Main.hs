@@ -30,19 +30,27 @@ import qualified Database as D
 
 -- |Fire up the appropriate process, depending on the command.
 main :: IO ()
-main = do args <- getArgs
-          let command = head args
+main = do
+  args <- getArgs
 
-          when (length args < 1) $
-               putStrLn "Expected at least one argument" >> exitFailure
+  when (length args < 1) $
+    die "Expected at least one argument"
 
-          config <- case args of
-                     (_:conffile:_) -> loadConfigFile conffile
-                     _ -> return $ Just defaults
+  let command = head args
 
-          case config of
-            Just conf -> run command conf
-            Nothing -> putStrLn "Failed to read configuration" >> exitFailure
+
+  config <- case args of
+             (_:conffile:_) -> loadConfigFile conffile
+             _ -> return $ Just defaults
+
+  case config of
+    Just conf -> run command conf
+    Nothing   -> die "Failed to read configuration"
+
+-- |Die with a fatal error
+die :: String -- ^ The error description
+    -> IO ()
+die err = putStrLn err >> exitFailure
 
 -------------------------
 
@@ -55,37 +63,38 @@ run _           = badcommand
 
 -- |Run the server
 runserver :: CommandRunner
-runserver conf = do let host = get' conf "server" "host"
-                    let port = get' conf "server" "port"
+runserver conf = do
+  let host = get' conf "server" "host"
+  let port = get' conf "server" "port"
 
-                    let connstr  = get' conf "database" "connection_string"
-                    let poolsize = get' conf "database" "pool_size"
+  let connstr  = get' conf "database" "connection_string"
+  let poolsize = get' conf "database" "pool_size"
 
-                    let settings = setHost (fromString host) $
-                                   setPort port
-                                   defaultSettings
+  let settings = setHost (fromString host) . setPort port $ defaultSettings
 
-                    putStrLn $ "Starting Λδ on " ++ host ++ ":" ++ show port
-                    withPool (fromString connstr) poolsize $
-                        runSettings settings . lambdadelta conf
+  putStrLn $ "Starting Λδ on " ++ host ++ ":" ++ show port
+  withPool (fromString connstr) poolsize $
+    runSettings settings . lambdadelta conf
 
 -- |Migrate the database
 migrate :: CommandRunner
-migrate conf = do let connstr  = get' conf "database" "connection_string"
-                  let poolsize = get' conf "database" "pool_size"
-                  withDB (fromString connstr) poolsize $ runMigration migrateAll
+migrate conf = do
+  let connstr  = get' conf "database" "connection_string"
+  let poolsize = get' conf "database" "pool_size"
+  withDB (fromString connstr) poolsize $ runMigration migrateAll
 
 -- |Populate the database with test data
 populate :: CommandRunner
-populate conf = do let connstr  = get' conf "database" "connection_string"
-                   let poolsize = get' conf "database" "pool_size"
-                   withDB (fromString connstr) poolsize $ do
-                       let board = D.Board "b" "Random" "Not like 4chan"
-                       void $ insert board
+populate conf = do
+  let connstr  = get' conf "database" "connection_string"
+  let poolsize = get' conf "database" "pool_size"
+  withDB (fromString connstr) poolsize $ do
+    let board = D.Board "b" "Random" "Not like 4chan"
+    void $ insert board
 
 -- |Fail with an error
 badcommand :: CommandRunner
-badcommand _ = putStrLn "Unknown command" >> exitFailure
+badcommand _ = die "Unknown command"
 
 -------------------------
 
@@ -99,9 +108,9 @@ lambdadelta conf = let webroot = get' conf "server" "web_root"
 -- Todo: use SqlPersistT?
 process :: ConfigParser -> ConnectionPool -> MkUrl -> Sitemap -> Application
 process conf pool mkurl path req = requestHandler `catchIOError` runError
-    where requestHandler = runHandler $ route path
-          runError error = runHandler $ error500 (show error)
-          runHandler h   = runPool (runReaderT h (conf, mkurl, req)) pool
+  where requestHandler = runHandler $ route path
+        runError err   = runHandler $ error500 (show err)
+        runHandler h   = runPool (runReaderT h (conf, mkurl, req)) pool
 
 -- |Route a request to a handler
 route :: Sitemap -> Handler
