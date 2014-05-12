@@ -36,7 +36,7 @@ board board page = do summary_size     <- conf' "board" "summary_size"
                         Nothing -> error404 "No such board"
                         Just (Entity boardid board) ->
                             do threads <- selectList [PostThread ==. Nothing]
-                                                    [ Asc PostUpdated
+                                                    [ Desc PostUpdated
                                                     , LimitTo threads_per_page
                                                     , OffsetBy $ (page - 1) * threads_per_page]
                                pages <- getNumPages boardid

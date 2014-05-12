@@ -55,7 +55,7 @@ newThread board = do
     Just (Entity _ thread) -> do
       threads <- selectList [ PostThread ==. Nothing
                            , PostBoard ==. board
-                           , PostUpdated >. postUpdated thread] []
+                           , PostUpdated <. postUpdated thread] []
       mapM_ purge threads
     Nothing -> return ()
 
