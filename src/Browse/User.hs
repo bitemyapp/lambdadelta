@@ -155,12 +155,12 @@ handlePostForm boardId threadId = do
 -- |Check if a value is set and is nonempty
 hasValue :: Maybe Text -> Bool
 hasValue Nothing = False
-hasValue (Just t) = Te.length (Te.strip t) /= 0
+hasValue (Just t) = not $ Te.null (Te.strip t)
 
 -- |Check if a file is nonempty
 hasContent :: Maybe (FileInfo L.ByteString) -> Bool
 hasContent Nothing = False
-hasContent (Just (FileInfo _ _ c)) = L.length c /= 0
+hasContent (Just (FileInfo _ _ c)) = not $ L.null c
 
 -- |Upload a possible file, returning the ID
 -- Todo: Generate thumbnails
