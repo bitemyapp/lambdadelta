@@ -33,12 +33,16 @@ Post
 
     UniquePostID number board
 
+    deriving Show
+
 Board
     name     Text
     title    Text
     subtitle Text
 
     UniqueBoardName name
+
+    deriving Show
 
 File
     name     Text
@@ -51,6 +55,8 @@ File
     width    Int
     height   Int
     spoiler  Bool
+
+    deriving Show
 |]
 
 -------------------------
