@@ -5,20 +5,24 @@
 -->
 
 <nav class="#{position}">
-  $forall boardgroup <- boardgroups
-    <ol class="boardlist">
-      $forall board <- boardgroup
-        <li>
-          <a href="@{Board (boardName board) 1}" title="/#{boardName board}/ - #{boardTitle board}">#{boardName board}
+  <div .boardlist>
+    $forall boardgroup <- boardgroups
+      <ol>
+        $forall board <- boardgroup
+          <li>
+            <a href="@{Board (boardName board) 1}" title="/#{boardName board}/ - #{boardTitle board}">#{boardName board}
   $maybe (board, currentPage, numPages) <- board
-    <ol class="pages">
-      $if numPages == 0
-        $forall page <- pageList numPages
-          $if page == currentPage
-            <li class="selected">#{page}
-          $else
-            <li>
-              <a href="@{Board (boardName board) page}">#{page}
-      $else
-        <li>
-          <a href="@{Board (boardName board) 1}">return
+    <div .pages>
+      <ol>
+        $if numPages /= 0
+          $forall page <- pageList numPages
+            $if page == currentPage
+              <li .selected>#{page}
+            $else
+              <li>
+                <a href="@{Board (boardName board) page}">#{page}
+        $else
+         <li .return>
+           <a href="@{Board (boardName board) 1}">return
+
+  <div class="clear"></div>
