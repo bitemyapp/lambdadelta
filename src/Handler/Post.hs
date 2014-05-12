@@ -192,7 +192,7 @@ handleNewPost boardId threadId name email subject comment fileId password = do
   number  <- ((+1) . length) <$> selectList [PostBoard ==. boardId] []
   updated <- liftIO getCurrentTime
 
-  let name'     = fromMaybe "" name
+  let name'     = if hasValue name then fromJust name else "Anonymous"
   let email'    = fromMaybe "" email
   let subject'  = fromMaybe "" subject
   let comment'  = fromMaybe "" comment
