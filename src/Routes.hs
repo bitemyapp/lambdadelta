@@ -26,7 +26,7 @@ instance PathInfo Sitemap where
     toPathSegments Banner = ["banner.png"]
     toPathSegments (Board board 1) = [board]
     toPathSegments (Board board page) = [board, pack $ show page]
-    toPathSegments (Thread board thread) = [board, pack $ show thread]
+    toPathSegments (Thread board thread) = [board, "res", pack $ show thread]
     toPathSegments (PostThread board) = ["post", board]
     toPathSegments (PostReply board thread) = ["post", board, pack $ show thread]
     toPathSegments (File board file) = [board, "src", file]
