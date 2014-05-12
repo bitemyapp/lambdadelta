@@ -1,0 +1,250 @@
+body {
+	background: #1E1E1E;
+	color: #999999;
+	font-family: sans-serif;
+	font-size: 12px;
+    margin: 0;
+    padding: 0;
+}
+
+a:link, a:visited, a.email {
+	color: #CCCCCC;
+	text-decoration: none;
+	font-family: sans-serif;
+}
+
+a:link, a:visited, a:email {
+    transition: 0.15s text-shadow, 0.15s border-color, 0.15s background-color, 0.15s color;
+}
+
+a:link:hover, a:visited:hover {
+	color: #32DD72;
+	font-family: sans-serif;
+	text-decoration: none;
+	text-shadow: 0px 0px 5px #fff;
+}
+
+.clear {
+    height: 0;
+    padding: 0;
+    margin: 0;
+    clear: both;
+}
+
+/* ********** Navigation ********** */
+
+nav {
+    color: #999;
+    background-color: rgba(12%, 12%, 12%, 0.10);
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    clear: both;
+}
+
+nav.top {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+}
+
+nav.top:hover {
+    background-color: rgba(30%, 30%, 30%, 0.65);
+}
+
+nav ol {
+    list-style-type: none;
+    margin: 0 6px;
+    padding: 0;
+}
+
+nav li {
+    display: inline;
+}
+
+nav li:first-child:before {
+    content: "[ ";
+}
+
+nav li:not(:last-child):after {
+    content: " / ";
+}
+
+nav li:last-child:after {
+    content: " ]";
+}
+
+nav a {
+    text-decoration: none;
+}
+
+nav .boardlist {
+    float: left;
+}
+
+nav .pages {
+    float: right;
+}
+
+/* ********** Header ********** */
+
+header {
+    text-align: center;
+}
+
+img.banner {
+    width: 300px;
+    height: 100px;
+    border: 1px solid #a9a9a9;
+    margin: 12px auto 0 auto;
+    border-radius: 2px;
+}
+
+h1 {
+    font-family: Tahoma, sans-serif;
+    letter-spacing: -2px;
+	font-size: 20pt;
+	text-align: center;
+	color: #32DD72;
+    margin: 0;
+}
+
+div.subtitle {
+    color: #32DD72;
+    font-size: 8pt;
+}
+
+/* ********** Post Form ********** */
+
+table {
+    margin: auto;
+    border-collapse: separate;
+    border-spacing: 1px;
+    border-color: gray;
+}
+
+table * {
+    margin: 0;
+}
+
+th {
+    background: #333;
+    color: #AAA;
+    font-weight: 600;
+    border-radius: 2px;
+    padding: 4px;
+    width: 64px;
+    text-align: left;
+}
+
+input[type="text"], textarea {
+    width: 100%;
+}
+
+input[type="text"], input[type="password"], input[type="submit"], textarea {
+    background: #333;
+    color: #CCC;
+    border: 1px solid #666;
+    border-radius: 2px;
+    width: 100%;
+    padding: 3px 4px;
+    font-size: 13px;
+    font-family: monospace;
+    box-sizing: border-box;
+    height: 25px;
+}
+
+textarea {
+    min-height: 25px;
+    height: 79px;
+    padding-top: 5px;
+    min-width: 100%;
+}
+
+input[name="subject"] {
+    float: left;
+    width: calc(100% - 90px);
+}
+
+input[type="submit"] {
+    width: 88px;
+    margin-left: 2px;
+}
+
+input[name="password"] {
+    width: 115px;
+}
+
+form span {
+    font-size: 10px;
+}
+
+/* ********** Thread Display ********** */
+
+.thread {
+    margin: 0 16px;
+    clear: both;
+}
+
+.thread {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #333;
+}
+
+.fileinfo span {
+    font-size: 10px;
+}
+
+.fileinfo {
+    margin: 0;
+    padding: 0;
+}
+
+.thread img {
+    float: left;
+    margin: 10px 20px;
+    border-radius: 2px;
+    display: block;
+}
+
+.meta {
+    margin: 2px 0;
+    padding: 0;
+}
+
+span.name {
+    font-weight: 800;
+    color: #32DD72;
+}
+
+.subject {
+    color: #A4B80D;
+    font-weight: 800;
+}
+
+.reply {
+    background: #333;
+    border: #555 1px solid;
+    margin: 1.5px 16px;
+    padding: 0.2em 0.6em 0.5em 0.6em;
+    border-radius: 2px;
+    max-width: 97%;
+    display: inline-block;
+}
+
+.body {
+    padding: 1em;
+}
+
+.name a:active, .name a:link, .name a:visited, .name a:hover {
+    color: #85CF9F;
+}
+
+/* ********** Footer ********** */
+
+footer {
+    text-align: center;
+}
