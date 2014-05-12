@@ -22,47 +22,8 @@ $doctype 5
 
     <!-- post form - look at digestive-functors for that -->
 
-    $forall TThread image op posts imageposts replies <- threads
-      <div id="thread_#{postNumber op}">
-        <p class="fileinfo"> File:
-          <a href="@{File (boardName board) (fileName image)}">#{fileName image}
-          <span>
-            (#{niceSize image}, #{fileWidth image}x#{fileHeight image}, #{fileOrigname image})
-        <a href="@{File (boardName board) (fileName image)}">
-          <img src="@{File (boardName board) (fileName image)}">
-        <div class="post op">
-          <p class="meta">
-            <a href="@{Thread (boardName board) (postNumber op)}##{postNumber op}">No.
-            <a href="@{Thread (boardName board) (postNumber op)}#q#{postNumber op}">#{postNumber op}
-            <a href="@{Thread (boardName board) (postNumber op)}">[Reply]
-          <div class="body">
-            #{postComment op}
-          $if and [posts /= 0, imageposts /= 0]
-            <p class="omitted">
-              $if and [posts == 1, imageposts == 1]
-                1 post and 1 image reply omitted.
-              $elseif posts == 1
-                1 post omitted.
-              $elseif imageposts == 1
-                #{posts} posts and ! image reply omitted.
-              $elseif imageposts == 0
-                #{posts} posts omitted.
-              $else
-                #{posts} posts and #{imageposts} image replies omitted.
-              Click reply to view.
-
-        $forall (image, post) <- replies
-          <div class="post reply" id="reply_#{postNumber post}">
-            $maybe image <- image
-              <p class="fileinfo">
-                File:
-                <a href="@{File (boardName board) (fileName image)}">#{fileName image}
-                <span>
-                  (#{niceSize image} KB, #{fileWidth image}x#{fileHeight image}, #{fileOrigname image})
-              <a href="@{File (boardName board) (fileName image)}">
-                <img src="@{File (boardName board) (fileName image)}">
-            <div class="body">
-              #{postComment post}
+    $forall thread <- threads
+      ^{inlineThread board thread}
 
     ^{navigation Bottom (Just (board, currentPage, numPages)) boardgroups}
 

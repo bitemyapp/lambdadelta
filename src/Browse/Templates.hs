@@ -49,9 +49,15 @@ board board boardgroups currentPage numPages threads = $(hamletFile "templates/h
 -- |Index template
 -- Todo: recent posts/images
 -- Todo: title
-index :: [[D.Board]] -- ^ The boad groupings
+index :: [[D.Board]] -- ^ The board groupings
       -> HtmlUrl Sitemap
 index boardgroups = $(hamletFile "templates/html/index.hamlet")
+
+-- |Helper template for threads
+inlineThread :: D.Board -- ^ The board
+             -> TThread -- ^ The thread
+             -> HtmlUrl Sitemap
+inlineThread board (TThread image op posts imageposts replies) = $(hamletFile "templates/html/inline_thread.hamlet")
 
 -- |Error template
 error :: Status -> String -> HtmlUrl Sitemap
