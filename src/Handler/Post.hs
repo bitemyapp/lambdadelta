@@ -8,7 +8,7 @@ module Handler.Post ( newThread
 import Prelude hiding (concat, null)
 
 import Control.Applicative ((<$>))
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Error (ErrorT, throwError)
 import Control.Monad.IO.Class (liftIO)
@@ -200,13 +200,16 @@ handleNewPost boardId threadId name email subject comment fileId password = do
 
   insert $ Post number boardId threadId updated fileId name' email' subject' comment' password'
 
--- |Bump a thread
+-- |Bump a thread if it's below the bump limit
 bumpThread :: PostId -- ^ The OP
            -> RequestProcessor ()
 bumpThread threadId = do
-  now <- liftIO getCurrentTime
-  update threadId [PostUpdated =. now]
-  return ()
+  bump_limit <- conf' "board" "bump_limit"
+  replies <- length <$> selectList [PostThread ==. Just threadId] []
+
+  when (replies < bump_limit) $ do
+    now <- liftIO getCurrentTime
+    update threadId [PostUpdated =. now]
 
 -------------------------
 
