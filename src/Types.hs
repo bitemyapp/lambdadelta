@@ -14,7 +14,7 @@ type MkUrl = Sitemap -> [(Text, Maybe Text)] -> Text
 
 -- |Function which handles a request
 -- Todo: Should probably use SqlPersistT
-type RequestProcessor r = ReaderT (ConfigParser, MkUrl, Request) SqlPersistM r
+type RequestProcessor = ReaderT (ConfigParser, MkUrl, Request) SqlPersistM
 type Handler = RequestProcessor Response
 
 -- |Function which runs an IO command (eg, runserver)

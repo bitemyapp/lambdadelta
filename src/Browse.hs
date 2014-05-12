@@ -10,7 +10,7 @@ import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import Network.HTTP.Types.Status
-import Network.Wai (responseBuilder, responseFile)
+import Network.Wai (responseBuilder, responseFile, responseLBS)
 import Routes
 import Text.Blaze.Html.Renderer.Utf8 (renderHtmlBuilder)
 import Text.Hamlet (HtmlUrl)
@@ -84,3 +84,9 @@ respondFile' fp = do exists <- liftIO $ doesFileExist fp
                      if exists
                      then return $ responseFile ok200 [] fp Nothing
                      else htmlResponse notFound404 $ T.error notFound404 "File not found"
+
+-- |Produce a response to redirect the user
+redirect :: Sitemap -> Handler
+redirect url = do
+  mkurl <- askMkUrl
+  return $ responseLBS found302 [("Location", encodeUtf8 $ mkurl url [])] ""

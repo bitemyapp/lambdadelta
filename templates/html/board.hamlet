@@ -20,7 +20,7 @@ $doctype 5
       <h1>/#{boardName board}/ - #{boardTitle board}
       <div class="subtitle">#{boardSubtitle board}
 
-    <!-- post form - look at digestive-functors for that -->
+    ^{threadForm board}
 
     $forall thread <- threads
       ^{inlineThread board thread}

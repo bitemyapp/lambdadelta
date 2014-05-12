@@ -1,0 +1,45 @@
+<!-- Template vars:
+ - target :: Where to send the response to
+ - board :: Board, the current board
+ - thread :: Maybe Post, OP of the current thread (if replying)
+-->
+
+<form action="@{target}" method="post" enctype="multipart/form-data">
+  <table>
+    <tr>
+      <th>
+        <label for="name">Name
+      <td>
+        <input type="text" #name name="name">
+    <tr>
+      <th>
+        <label for="email">Email
+      <td>
+        <input type="text" #email name="email">
+    <tr>
+      <th>
+        <label for="subject">Subject
+      <td>
+        <input type="text" #subject name="subject">
+        $if isNothing thread
+          <input type="submit" #post name="post" value="New Topic">
+        $else
+          <input type="submit" #post name="post" value="Reply">
+    <tr>
+      <th>
+        <label for="comment">Comment
+      <td>
+        <textarea #comment name="comment">
+    <tr>
+      <th>
+        <label for="file">File
+      <td>
+        <input type="file" #file name="file">
+        <input type="checkbox" #spoiler name="spoiler">
+        <label for="spoiler">Spoiler?
+    <tr>
+      <th>
+        <label for="password">Password
+      <td>
+        <input type="password" #password name="password">
+        <span>(For file deletion)

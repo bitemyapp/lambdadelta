@@ -4,6 +4,7 @@ module Browse.Templates (TThread(..),
                          board, index, thread,
                          Browse.Templates.error) where
 
+import Data.Maybe (isNothing)
 import Data.Text (Text, pack)
 import Data.Text.Encoding (decodeUtf8)
 import Database hiding (Board, File, Post)
@@ -85,6 +86,21 @@ inlineThread :: D.Board -- ^ The board
              -> TThread -- ^ The thread
              -> HtmlUrl Sitemap
 inlineThread board (TThread image op posts imageposts replies) = $(hamletFile "templates/html/inline_thread.hamlet")
+
+-- |New thread form template
+threadForm :: D.Board -- ^ The board
+           -> HtmlUrl Sitemap
+threadForm board = let thread = Nothing
+                       target = Routes.PostThread $ boardName board
+                   in $(hamletFile "templates/html/post_form.hamlet")
+
+-- |New reply form template
+replyForm :: D.Board -- ^ The board
+          -> TThread  -- ^ The OP
+          -> HtmlUrl Sitemap
+replyForm board (TThread _ op _ _ _) = let thread = Just op
+                                           target = PostReply (boardName board) $ postNumber op
+                                       in $(hamletFile "templates/html/post_form.hamlet")
 
 -------------------------
 
