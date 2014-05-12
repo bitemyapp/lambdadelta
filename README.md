@@ -44,6 +44,17 @@ commands are as follows,
  - populate: Populate the database with sample data.
  - runserver: Run the Λδ server.
 
+Expectations
+------------
+
+There are some directoryes that Λδ expects to exist, relative to
+`file_root` in the configuration,
+
+ - /board/, home for all board-specific things
+ - /board/src/, images uploaded to a board
+ - /banner.png, banner to display
+ - /style.css, stylesheet
+
 Configuration
 -------------
 
