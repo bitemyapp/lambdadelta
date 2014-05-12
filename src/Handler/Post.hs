@@ -1,14 +1,16 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts, OverloadedStrings #-}
 
 module Handler.Post ( newThread
                     , newReply) where
 
 -- Todo: Replace calls to isJust/fromJust with pattern matching
--- Todo: Use the error monad all over the place
 
 import Prelude hiding (concat, null)
 
 import Control.Applicative ((<$>))
+import Control.Monad (unless)
+import Control.Monad.Trans (lift)
+import Control.Monad.Trans.Error (ErrorT, throwError)
 import Control.Monad.IO.Class (liftIO)
 import Configuration (conf')
 import Data.ByteString (concat)
@@ -31,25 +33,21 @@ import qualified Data.ByteString.Lazy as BL
 -- |Post a new thread, returning the file and post IDs on success.
 -- Todo: Take the board name, and produce a nice error when it doesn't
 -- exist.
--- Todo: Use the error monad, and return good error messages on
--- failure
 newThread :: BoardId -- ^ The board
-          -> RequestProcessor (Maybe (FileId, PostId))
+          -> ErrorT String RequestProcessor (FileId, PostId)
 newThread board = do
-  thread <- handlePostForm board Nothing
-  case thread of
-    Just (Just f, p) -> return $ Just (f, p)
-    _ -> return Nothing
+  -- If this pattern match fails, something has gone very wrong in
+  -- handlePostForm.
+  (Just f, p) <- handlePostForm board Nothing
+  return (f, p)
 
 -- |Post a new reply, returning the file (if it exists) and post IDs
 -- on success.
 -- Todo: Take the board name and thread number, and produce nice
 -- errors when they don't exist.
--- Todo: Use the error monad, and return good error messages on
--- failure.
 newReply :: BoardId -- ^ The board
          -> PostId  -- ^ The OP
-         -> RequestProcessor (Maybe (Maybe FileId, PostId))
+         -> ErrorT String RequestProcessor (Maybe FileId, PostId)
 newReply board = handlePostForm board . Just
 
 -------------------------
@@ -63,21 +61,15 @@ newReply board = handlePostForm board . Just
 -- modify the post
 -- Todo: sage/noko/dice - come up with a good way for the email field
 -- to modify the response and post
-
 handlePostForm :: BoardId      -- ^ The board
                -> Maybe PostId -- ^ The OP
-               -> RequestProcessor (Maybe (Maybe FileId, PostId))
+               -> ErrorT String RequestProcessor (Maybe FileId, PostId)
 handlePostForm boardId threadId = do
-  request <- askReq
+  request <- lift askReq
   (params, files) <- liftIO $ parseRequestBody lbsBackEnd request
 
-  let name     = decodeUtf8 <$> lookup "name"     params
-  let email    = decodeUtf8 <$> lookup "email"    params
-  let subject  = decodeUtf8 <$> lookup "subject"  params
-  let comment  = decodeUtf8 <$> lookup "comment"  params
-  let spoiler  = decodeUtf8 <$> lookup "spoiler"  params
-  let password = decodeUtf8 <$> lookup "password" params
-  let file     = lookup "file" files
+  let comment = decodeUtf8 <$> lookup "comment"  params
+  let file    = lookup "file" files
 
   -- If this is a new thread, there must be both an image and a comment.
   -- If this is a reply, there must be at least one of an image or a comment.
@@ -85,22 +77,43 @@ handlePostForm boardId threadId = do
                       Just _  -> hasValue comment || hasContent file
                       Nothing -> hasValue comment && hasContent file
   
-  if isValidPost
-    then do
-    -- All looks good, construct a post, save the file, and bump the thread.
-    board  <- fromJust <$> get boardId
-    fileId <- handleFileUpload board file $ isJust spoiler
-    postId <- handleNewPost boardId threadId name email subject comment fileId password
+  -- Return an error if the post isn't good
+  unless isValidPost $ case threadId of
+                         Just _  -> replyError
+                         Nothing -> threadError comment file
 
-    -- bump the thread if there is a thread to bump
-    return () `maybe` bumpThread $ threadId
+  -- All looks good, construct a post, save the file, and bump the thread.
+  lift $ commitPost boardId threadId
 
-    -- return the relevant information
-    return $ Just (fileId, postId)
+-- |Commit a new post and possible file upload to the database
+commitPost :: BoardId -- ^ The board
+           -> Maybe PostId -- ^ The OP
+           -> RequestProcessor (Maybe FileId, PostId)
+commitPost boardId threadId = do
+  request <- askReq
+  (params, files) <- liftIO $ parseRequestBody lbsBackEnd request
 
-    -- post was not valid, return Nothing
-    else return Nothing
-           
+  let name     = decodeUtf8 <$> lookup "name"     params
+  let email    = decodeUtf8 <$> lookup "email"    params
+  let subject  = decodeUtf8 <$> lookup "subject"  params
+  let comment  = decodeUtf8 <$> lookup "comment"  params
+  let password = decodeUtf8 <$> lookup "password" params
+
+  let file    = lookup "file" files
+  let spoiler = isJust $ lookup "spoiler" params
+
+  board  <- fromJust <$> get boardId
+  fileId <- if hasContent file
+           then Just <$> handleFileUpload board (fromJust file) spoiler
+           else return Nothing
+  postId <- handleNewPost boardId threadId name email subject comment fileId password
+
+  -- bump the thread if there is a thread to bump
+  return () `maybe` bumpThread $ threadId
+
+  -- return the relevant information
+  return (fileId, postId)
+
 -------------------------
 
 -- |Check if a value is set and is nonempty
@@ -116,11 +129,12 @@ hasContent (Just (FileInfo _ _ c)) = not $ BL.null c
 -- |Upload a possible file, returning the ID
 -- Todo: Generate thumbnails
 -- Todo: Implement maximum file sizes
-handleFileUpload :: Board -- ^ The board
-                 -> Maybe (FileInfo BL.ByteString) -- ^ The file
-                 -> Bool  -- ^ Whether it is spoilered
-                 -> RequestProcessor (Maybe FileId)
-handleFileUpload board (Just (FileInfo fname _ content)) spoiler = do
+-- Todo: Implement file type restrictions
+handleFileUpload :: Board                  -- ^ The board
+                 -> FileInfo BL.ByteString -- ^ The file
+                 -> Bool                   -- ^ Whether it is spoilered
+                 -> RequestProcessor FileId
+handleFileUpload board (FileInfo fname _ content) spoiler = do
   -- Construct the target file path
   fileroot <- conf' "server" "file_root"
   let fname' = map (chr . fromIntegral) $ B.unpack fname
@@ -128,27 +142,19 @@ handleFileUpload board (Just (FileInfo fname _ content)) spoiler = do
   let path = joinPath [fileroot, unpack $ boardName board, "src", fnamehash]
   let size = fromIntegral $ BL.length content
 
--- I am saddened that this is how to check if a file was
--- uploaded. Also, this should probably be moved to handlePostForm
--- when I refactor this horrible mess.
-  if BL.null content
-  then return Nothing
-  else do
-    -- Save the file
-    liftIO $ BL.writeFile path content
+  -- Save the file
+  liftIO $ BL.writeFile path content
 
-    -- Get its dimensions
-    (width, height) <- liftIO . withMagickWandGenesis $ do
-      (_, w) <- magickWand
-      readImageBlob w (concat $ BL.toChunks content)
-      width  <- getImageWidth w
-      height <- getImageHeight w
+  -- Get its dimensions
+  (width, height) <- liftIO . withMagickWandGenesis $ do
+    (_, w) <- magickWand
+    readImageBlob w (concat $ BL.toChunks content)
+    width  <- getImageWidth w
+    height <- getImageHeight w
 
-      return (width, height)
+    return (width, height)
 
-    fmap Just . insert $ File (pack fnamehash) (pack fname') size width height spoiler
-
-handleFileUpload _ Nothing _ = return Nothing
+  insert $ File (pack fnamehash) (pack fname') size width height spoiler
 
 -- |Construct and insert a new post into the database
 handleNewPost :: BoardId      -- ^ The board
@@ -179,3 +185,19 @@ bumpThread threadId = do
   now <- liftIO getCurrentTime
   update threadId [PostUpdated =. now]
   return ()
+
+-------------------------
+
+-- |Get the error message for a reply
+replyError :: Monad m => ErrorT String m a
+replyError = throwError "Replies must have at least a file or a comment"
+
+-- |Get the error message for a thread
+threadError :: Monad m
+            => Maybe Text -- ^ The comment
+            -> Maybe (FileInfo BL.ByteString) -- ^ The file
+            -> ErrorT String m a
+threadError com fil = throwError $ threadError' (hasValue com) (hasContent fil)
+  where threadError' False False = "Topics must have both a file and a comment."
+        threadError' True False  = "Topics must have a file."
+        threadError' False True  = "Topics must have a comment"

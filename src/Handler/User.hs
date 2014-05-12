@@ -2,10 +2,11 @@
 
 module Handler.User (index, board, thread, Handler.User.postThread, postReply) where
 
+import Configuration (conf')
+import Control.Monad.Trans.Error (runErrorT)
 import Handler
 import Handler.Error (error400, error404)
 import Handler.Post (newThread, newReply)
-import Configuration (conf')
 import Data.Maybe (catMaybes, fromJust, isJust)
 import Database
 import Database.Persist
@@ -62,17 +63,16 @@ thread board thread = do boardlisting <- getBoardListing
 -- Todo: anti-spam
 -- Todo: Only respond to POST
 -- Todo: Handle noko
--- Todo: Better error messages
 postThread :: Text -> Handler
 postThread board = do
   maybeBoard <- getBy $ UniqueBoardName board
 
   case maybeBoard of
     Just (Entity boardId _) -> do
-      result <- newThread boardId
+      result <- runErrorT $ newThread boardId
       case result of
-        Just _ -> redirect $ R.Board board 1
-        Nothing -> error400 "Failed to create post."
+        Right _ -> redirect $ R.Board board 1
+        Left err -> error400 err
 
     Nothing -> error404 "No such board"
 
@@ -86,10 +86,10 @@ postReply board thread = do
       maybeThread <- getBy $ UniquePostID thread boardId
       case maybeThread of
         Just (Entity threadId _) -> do
-          result <- newReply boardId threadId
+          result <- runErrorT $ newReply boardId threadId
           case result of
-            Just _ -> redirect $ R.Board board 1
-            Nothing -> error400 "Failed to create post"
+            Right _ -> redirect $ R.Board board 1
+            Left err -> error400 err
         Nothing -> error404 "No such thread"
     Nothing -> error404 "No such board"
 
