@@ -58,7 +58,7 @@
           <span>
             (#{niceSize image}, #{fileWidth image}x#{fileHeight image}, #{fileOrigname image})
         <a href="@{File (boardName board) (fileName image)}">
-          <img src="@{File (boardName board) (fileName image)}">
+          <img src="@{Thumb (boardName board) (fileName image)}">
       <p .meta>
         $if (nonEmpty $ postSubject post)
           <span .subject>
@@ -75,3 +75,4 @@
         <a href="@{Thread (boardName board) (postNumber post)}#q#{postNumber post}">#{postNumber post}
       <div .body>
         #{postComment post}
+    <br>
