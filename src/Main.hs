@@ -2,9 +2,9 @@
 
 module Main where
 
-import Browse (respondFile)
-import Browse.User
-import Browse.Error (error404, error500)
+import Handler (respondFile)
+import Handler.User
+import Handler.Error (error404, error500)
 import Configuration (ConfigParser, loadConfigFile, defaults, get')
 import Control.Exception.Base ()
 import Control.Monad (when, void)

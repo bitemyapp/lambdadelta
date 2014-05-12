@@ -57,10 +57,10 @@ executable lambdadelta
   other-modules:       Database
                      , Routes
                      , Types
-                     , Browse
-                     , Browse.Error
-                     , Browse.User
-                     , Browse.Templates
+                     , Handler
+                     , Handler.Error
+                     , Handler.User
+                     , Handler.Templates
                      , Configuration
 
   ghc-options: -Wall  

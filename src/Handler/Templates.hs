@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 
-module Browse.Templates (TThread(..),
-                         board, index, thread,
-                         Browse.Templates.error) where
+module Handler.Templates ( TThread(..)
+                         , board, index, thread
+                         , Handler.Templates.error) where
 
 import Data.Maybe (isNothing)
 import Data.Text (Text, pack)

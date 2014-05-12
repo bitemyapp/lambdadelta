@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings, Rank2Types, TypeFamilies #-}
 
-module Browse.User (index, board, thread, Browse.User.postThread, postReply) where
+module Handler.User (index, board, thread, Handler.User.postThread, postReply) where
 
-import Browse
-import Browse.Error (error400, error404)
+import Handler
+import Handler.Error (error400, error404)
 import Control.Monad.IO.Class (liftIO)
 import Configuration (conf')
 import Data.Char (chr)
@@ -19,7 +19,7 @@ import Network.Wai.Parse
 import System.FilePath.Posix (joinPath, takeExtension)
 import Types
 
-import qualified Browse.Templates as T
+import qualified Handler.Templates as T
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Data.Text as Te

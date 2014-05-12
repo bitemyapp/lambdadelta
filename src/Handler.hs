@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Browse where
+module Handler where
 
 import Blaze.ByteString.Builder (Builder)
 import Blaze.ByteString.Builder.ByteString (fromByteString)
@@ -18,7 +18,7 @@ import System.Directory (doesFileExist)
 import System.FilePath.Posix (joinPath)
 import Types
 
-import qualified Browse.Templates as T (error)
+import qualified Handler.Templates as T (error)
 
 -- |Produce a 200 OK response from the given HTML
 html200Response :: HtmlUrl Sitemap -> Handler
