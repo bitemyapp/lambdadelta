@@ -13,7 +13,7 @@
     <span>
       (#{niceSize image}, #{fileWidth image}x#{fileHeight image}, #{fileOrigname image})
   <a href="@{File (boardName board) (fileName image)}">
-    <img src="@{File (boardName board) (fileName image)}">
+    <img src="@{Thumb (boardName board) (fileName image)}">
   <div class="post op">
     <p class="meta">
       <a href="@{Thread (boardName board) (postNumber op)}##{postNumber op}">No.

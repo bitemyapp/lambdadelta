@@ -15,6 +15,7 @@ data Sitemap = Index              -- ^ site index: /
              | PostThread Text    -- ^ new thread: /post/b/
              | PostReply Text Int -- ^ new reply: /post/b/123
              | File Text Text     -- ^ files: /b/src/123.png
+             | Thumb Text Text    -- ^ thumbnails: /b/thumb/123.png
              | Stylesheet         -- ^ stylesheets: /style.css
              | Banner             -- ^ banners: /banner.png
              | Error404           -- ^ catch-all route
@@ -30,6 +31,7 @@ instance PathInfo Sitemap where
     toPathSegments (PostThread board) = ["post", board]
     toPathSegments (PostReply board thread) = ["post", board, pack $ show thread]
     toPathSegments (File board file) = [board, "src", file]
+    toPathSegments (Thumb board file) = [board, "thumb", file]
 
     fromPathSegments = patternParse parse
 
@@ -56,6 +58,7 @@ instance PathInfo Sitemap where
               parse' [b, "res", t]  = case readMaybe $ unpack t of
                                        Just t' -> Thread b t'
                                        Nothing -> Error404
-              parse' [b, "src", f]  = File b f
+              parse' [b, "src", f]   = File b f
+              parse' [b, "thumb", f] = Thumb b f
 
               parse' _              = Error404

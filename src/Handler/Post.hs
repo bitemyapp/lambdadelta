@@ -22,7 +22,7 @@ import Data.Hash.MD5 (Str(..), md5s)
 import Data.Maybe (isJust, fromJust, fromMaybe)
 import Database
 import Database.Persist ((==.), (=.),  get, insert, selectList, update)
-import Graphics.ImageMagick.MagickWand (getImageHeight, getImageWidth, magickWand, readImageBlob, withMagickWandGenesis)
+import Graphics.ImageMagick.MagickWand
 import Network.Wai.Parse (FileInfo(..), Param, lbsBackEnd, parseRequestBody)
 import System.FilePath.Posix (joinPath, takeExtension)
 import Types (RequestProcessor, askReq)
@@ -127,7 +127,6 @@ hasContent Nothing = False
 hasContent (Just (FileInfo _ _ c)) = not $ BL.null c
 
 -- |Upload a possible file, returning the ID
--- Todo: Generate thumbnails
 -- Todo: Implement maximum file sizes
 -- Todo: Implement file type restrictions
 handleFileUpload :: Board                  -- ^ The board
@@ -135,24 +134,47 @@ handleFileUpload :: Board                  -- ^ The board
                  -> Bool                   -- ^ Whether it is spoilered
                  -> RequestProcessor FileId
 handleFileUpload board (FileInfo fname _ content) spoiler = do
+  thumbnail_width  <- conf' "board" "thumbnail_width"
+  thumbnail_height <- conf' "board" "thumbnail_height"
+
   -- Construct the target file path
   fileroot <- conf' "server" "file_root"
   let fname' = map (chr . fromIntegral) $ B.unpack fname
   let fnamehash = md5s (Str fname') ++ takeExtension fname'
-  let path = joinPath [fileroot, unpack $ boardName board, "src", fnamehash]
   let size = fromIntegral $ BL.length content
 
   -- Save the file
+  let path = joinPath [fileroot, unpack $ boardName board, "src", fnamehash]
   liftIO $ BL.writeFile path content
 
+
   -- Get its dimensions
+  let img = concat $ BL.toChunks content
   (width, height) <- liftIO . withMagickWandGenesis $ do
     (_, w) <- magickWand
-    readImageBlob w (concat $ BL.toChunks content)
+    readImageBlob w img
     width  <- getImageWidth w
     height <- getImageHeight w
 
     return (width, height)
+
+  -- Produce a thumbnail
+  let thumbpath = joinPath [fileroot, unpack $ boardName board, "thumb", fnamehash]
+  thumbnail <- liftIO . withMagickWandGenesis $ do
+    let w = fromIntegral width :: Float
+    let h = fromIntegral height :: Float
+
+    let (width', height') = if w / thumbnail_width > h / thumbnail_height
+                            then (floor $ thumbnail_width, floor $ thumbnail_width * h / w)
+                            else (floor $ thumbnail_height * w / h, floor $ thumbnail_height)
+
+    (_, w) <- magickWand
+    readImageBlob w img
+    resizeImage w width' height' lanczosFilter 1
+    setImageCompressionQuality w 95
+    getImageBlob w
+
+  liftIO $ B.writeFile thumbpath thumbnail
 
   insert $ File (pack fnamehash) (pack fname') size width height spoiler
 

@@ -46,6 +46,8 @@ defaults = forceEither . readstring emptyCP $ unlines
            , "summary_size = 5"
            , "threads_per_page = 10"
            , "maximum_pages = 10"
+           , "thumbnail_width = 300"
+           , "thumbnail_height = 300"
            ]
 
 -- |Get a value from the configuration unsafely
