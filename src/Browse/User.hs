@@ -130,27 +130,28 @@ handlePostForm boardId threadId = do
   let spoiler  = fmap decodeUtf8 $ lookup "spoiler"  params
   let password = fmap decodeUtf8 $ lookup "password" params
 
-  -- If this is a new thread, there must be both an image and a
-  -- comment
-  if isNothing threadId && (not (hasValue comment) || not (hasContent file))
-  then return Nothing
+  -- If this is a new thread, there must be both an image and a comment.
+  -- If this is a reply, there must be at least one of an image or a comment.
+  let isValidPost = case threadId of
+        Just {} -> hasValue comment || hasContent file
+        Nothing -> hasValue comment && hasContent file
+  
+  if isValidPost
+    then do
+    -- All looks good, construct a post, save the fail, and bump the thread.
+    board <- fmap fromJust $ get boardId
+    fileId <- handleFileUpload board file $ isJust spoiler
+    postId <- handleNewPost boardId threadId name email subject comment fileId password
 
-  -- If this is a reply, there must be at least one of an image or a
-  -- comment
-  else if isJust threadId && not (hasValue comment) && not (hasContent file)
-       then return Nothing
+    -- bump the thread if there is a thread to bump
+    return () `maybe` bumpThread $ threadId
 
-  -- All looks good, construct a post, save the file, and bump the
-  -- thread
-       else do board  <- fmap fromJust $ get boardId
-               fileId <- handleFileUpload board file $ isJust spoiler
-               postId <- handleNewPost boardId threadId name email subject comment fileId password
+    -- return the relevant information
+    return $ Just (fileId, postId)
 
-               case threadId of
-                 Just tid -> bumpThread tid
-                 Nothing -> return $ ()
-               return $ Just (fileId, postId)
-
+    -- post was not valid, return Nothing
+    else return Nothing
+           
 -- |Check if a value is set and is nonempty
 hasValue :: Maybe Text -> Bool
 hasValue Nothing = False
