@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 
-module Browse.Templates (TThread(..), board, index, Browse.Templates.error) where
+module Browse.Templates (TThread(..),
+                         board, index, thread,
+                         Browse.Templates.error) where
 
 import Data.Text (Text, pack)
 import Data.Text.Encoding (decodeUtf8)
@@ -40,6 +42,13 @@ board :: D.Board     -- ^ The board
       -> [TThread]   -- ^ The list of threads
       -> HtmlUrl Sitemap
 board board boardgroups currentPage numPages threads = $(hamletFile "templates/html/board.hamlet")
+
+-- |Thread page template
+thread :: D.Board     -- ^ The board
+       -> [[D.Board]] -- ^ The board groupings
+       -> TThread     -- ^ The thread
+       -> HtmlUrl Sitemap
+thread board boardgroups thread = $(hamletFile "templates/html/thread.hamlet")
 
 -- |Error template
 error :: Status -> String -> HtmlUrl Sitemap

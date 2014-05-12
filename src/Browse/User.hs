@@ -41,7 +41,20 @@ board board page = do summary_size     <- conf' "board" "summary_size"
                                html200Response $ T.board board boardlisting page pages threads'
 
 thread :: Text -> Int -> Handler
-thread board thread = utf8200Response "thread"
+thread board thread = do boardlisting <- getBoardListing
+                         maybeBoard <- getBy $ UniqueBoardName board
+
+                         case maybeBoard of
+                           Nothing -> error404 "No such board"
+                           Just (Entity boardid board) -> do
+                             maybeThread <- selectFirst [ PostBoard  ==. boardid
+                                                       , PostThread ==. Nothing
+                                                       , PostNumber ==. thread] []
+                             case maybeThread of
+                               Nothing -> error404 "No such thread"
+                               Just post -> do
+                                 thread <- getThread (-1) post
+                                 html200Response $ T.thread board boardlisting thread
 
 postThread :: Text -> Handler
 postThread board = utf8200Response "post thread"
@@ -86,11 +99,14 @@ getThread limit (Entity opid op) =
                                                , PostFile   !=. Nothing
                                                ] []
 
-       posts <- fmap reverse $
-               selectList [PostThread ==. Just opid]
-                          [ Desc PostUpdated
-                          , LimitTo limit
-                          ]
+       posts <- if limit < 0
+               then fmap reverse $
+                    selectList [PostThread ==. Just opid] [Desc PostUpdated]
+               else fmap reverse $
+                    selectList [PostThread ==. Just opid]
+                               [ Desc PostUpdated
+                               , LimitTo limit]
+
        posts' <- mapM getPostImage posts
 
        let omittedReplies = replies - length posts'
