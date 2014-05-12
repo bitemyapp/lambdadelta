@@ -14,6 +14,6 @@ $doctype 5
 
   <body>
     <h1>#{code} - #{message}
-    <p>Something went wrong.
+    <p>#{description}
     <p>
       <a href="@{Index}">Return</a>
