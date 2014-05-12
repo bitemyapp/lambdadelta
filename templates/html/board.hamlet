@@ -3,7 +3,7 @@
  - boardgroups :: [[Board]], list of board groupings
  - currentPage :: Int, the current page number
  - numPages :: Int, the number of pages
- - threads :: [((File, Post), Int, Int, [(Maybe File, Post)])], list of threads, with OP, number of replies/image replies omitted, and posts to show
+ - threads :: TThread, list of threads, with OP, number of replies/image replies omitted, and posts to show
 -->
 
 $doctype 5
