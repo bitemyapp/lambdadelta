@@ -23,7 +23,7 @@ $doctype 5
     ^{threadForm board}
 
     $forall thread <- threads
-      ^{inlineThread board thread}
+      ^{inlineThread board thread True}
 
     ^{bottomNavigation (Just (board, currentPage, numPages)) boardgroups}
 

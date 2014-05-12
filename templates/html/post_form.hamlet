@@ -10,7 +10,7 @@
       <th>
         <label for="name">Name
       <td>
-        <input type="text" #name name="name">
+        <input type="text" #name name="name" value="Anonymous">
     <tr>
       <th>
         <label for="email">Email

@@ -20,7 +20,7 @@ $doctype 5
 
     ^{replyForm board thread}
 
-    ^{inlineThread board thread}
+    ^{inlineThread board thread False}
 
     ^{bottomNavigation (Just (board, 0, 0)) boardgroups}
 

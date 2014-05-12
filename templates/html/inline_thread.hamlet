@@ -5,6 +5,7 @@
  - posts :: Int, the number of replies omitted
  - imageposts :: Int, the number of image replies omitted
  - replies :: [(Maybe File, Post)], the replies
+ - replyButton :: Bool, whether to show the reply link or not
 -->
 
 <div .thread id="thread_#{postNumber op}">
@@ -15,11 +16,21 @@
   <a href="@{File (boardName board) (fileName image)}">
     <img src="@{Thumb (boardName board) (fileName image)}">
   <div class="post op">
-    <p class="meta">
+    <p .meta>
+      $if (nonEmpty $ postSubject op)
+        <span .subject>
+          #{postSubject op}
+      <span .name>
+        $if (nonEmpty $ postEmail op)
+          <a href="mailto:#{postEmail op}">
+            #{postName op}
+        $else
+          #{postName op}
       <a href="@{Thread (boardName board) (postNumber op)}##{postNumber op}">No.
       <a href="@{Thread (boardName board) (postNumber op)}#q#{postNumber op}">#{postNumber op}
-      <a href="@{Thread (boardName board) (postNumber op)}">[Reply]
-    <div class="body">
+      $if replyButton
+        <a href="@{Thread (boardName board) (postNumber op)}">[Reply]
+    <div .body>
       #{postComment op}
 
     $if and [posts /= 0, imageposts /= 0]
@@ -46,5 +57,17 @@
             (#{niceSize image} KB, #{fileWidth image}x#{fileHeight image}, #{fileOrigname image})
         <a href="@{File (boardName board) (fileName image)}">
           <img src="@{File (boardName board) (fileName image)}">
-      <div class="body">
+      <p .meta>
+        $if (nonEmpty $ postSubject post)
+          <span .subject>
+            #{postSubject post}
+        <span .name>
+          $if (nonEmpty $ postEmail post)
+            <a href="mailto:#{postEmail post}">
+              #{postName post}
+          $else
+            #{postName post}
+        <a href="@{Thread (boardName board) (postNumber post)}##{postNumber post}">No.
+        <a href="@{Thread (boardName board) (postNumber post)}#q#{postNumber post}">#{postNumber post}
+      <div .body>
         #{postComment post}

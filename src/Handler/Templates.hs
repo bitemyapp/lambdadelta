@@ -4,8 +4,10 @@ module Handler.Templates ( TThread(..)
                          , board, index, thread
                          , Handler.Templates.error) where
 
+import Prelude hiding (null)
+
 import Data.Maybe (isNothing)
-import Data.Text (Text, pack)
+import Data.Text (Text, pack, null, strip)
 import Data.Text.Encoding (decodeUtf8)
 import Database hiding (Board, File, Post)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
@@ -84,8 +86,9 @@ navigation pos board boardgroups = let position = case pos of
 -- |Thread template
 inlineThread :: D.Board -- ^ The board
              -> TThread -- ^ The thread
+             -> Bool    -- ^ Whether to show the reply link or now
              -> HtmlUrl Sitemap
-inlineThread board (TThread image op posts imageposts replies) = $(hamletFile "templates/html/inline_thread.hamlet")
+inlineThread board (TThread image op posts imageposts replies) replyButton = $(hamletFile "templates/html/inline_thread.hamlet")
 
 -- |New thread form template
 threadForm :: D.Board -- ^ The board
@@ -117,3 +120,7 @@ niceSize image = let (sz, unit) = niceSize' (fromIntegral $ fileSize image) "B"
 -- |Produce a list of page numbers
 pageList :: Int -> [Int]
 pageList last = [1..last]
+
+-- |Check if a text value is nonempty
+nonEmpty :: Text -> Bool
+nonEmpty = not . null . strip
