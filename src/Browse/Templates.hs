@@ -23,9 +23,43 @@ data TThread = TThread D.File  -- ^ The OP file
                        Int     -- ^ The number of image replies
                        [(Maybe D.File, D.Post)] -- ^ The replies
 
+-------------------------
+
+-- |Index template
+-- Todo: recent posts/images
+-- Todo: title
+index :: [[D.Board]] -- ^ The board groupings
+      -> HtmlUrl Sitemap
+index boardgroups = $(hamletFile "templates/html/index.hamlet")
+
+-- |Board index page template
+board :: D.Board     -- ^ The board
+      -> [[D.Board]] -- ^ The board groupings
+      -> Int         -- ^ The current page
+      -> Int         -- ^ The number of pages
+      -> [TThread]   -- ^ The list of threads
+      -> HtmlUrl Sitemap
+board board boardgroups currentPage numPages threads = $(hamletFile "templates/html/board.hamlet")
+
+-- |Error template
+error :: Status -> String -> HtmlUrl Sitemap
+error status description = let code    = statusCode status
+                               message = decodeUtf8 $ statusMessage status
+                           in $(hamletFile "templates/html/error.hamlet")
+
+-------------------------
+
 -- |Footer template
 footer :: HtmlUrl Sitemap
 footer = $(hamletFile "templates/html/footer.hamlet")
+
+-- |Top navigation bar
+topNavigation :: Maybe (D.Board, Int, Int) -> [[D.Board]] -> HtmlUrl Sitemap
+topNavigation = navigation Top
+
+-- |Bottom navigation bar
+bottomNavigation :: Maybe (D.Board, Int, Int) -> [[D.Board]] -> HtmlUrl Sitemap
+bottomNavigation = navigation Bottom
 
 -- |Navigation bar template
 navigation :: Position                  -- ^ Position of the navigation bar (top or bottom), this affects the class
@@ -37,33 +71,13 @@ navigation pos board boardgroups = let position = case pos of
                                                     Bottom -> "bottom" :: Text
                                    in $(hamletFile "templates/html/navigation.hamlet")
 
--- |Board index page template
-board :: D.Board     -- ^ The board
-      -> [[D.Board]] -- ^ The board groupings
-      -> Int         -- ^ The current page
-      -> Int         -- ^ The number of pages
-      -> [TThread]   -- ^ The list of threads
-      -> HtmlUrl Sitemap
-board board boardgroups currentPage numPages threads = $(hamletFile "templates/html/board.hamlet")
-
--- |Index template
--- Todo: recent posts/images
--- Todo: title
-index :: [[D.Board]] -- ^ The board groupings
-      -> HtmlUrl Sitemap
-index boardgroups = $(hamletFile "templates/html/index.hamlet")
-
--- |Helper template for threads
+-- |Thread template
 inlineThread :: D.Board -- ^ The board
              -> TThread -- ^ The thread
              -> HtmlUrl Sitemap
 inlineThread board (TThread image op posts imageposts replies) = $(hamletFile "templates/html/inline_thread.hamlet")
 
--- |Error template
-error :: Status -> String -> HtmlUrl Sitemap
-error status description = let code    = statusCode status
-                               message = decodeUtf8 $ statusMessage status
-                           in $(hamletFile "templates/html/error.hamlet")
+-------------------------
 
 -- |Turn a filesize (in bytes) into a nice string
 niceSize :: D.File -> Text

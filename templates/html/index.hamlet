@@ -9,6 +9,6 @@ $doctype 5
     <title>Hello, world
     <link rel="stylesheet" href="@{Stylesheet}">
   <body>
-    ^{navigation Top Nothing boardgroups}
+    ^{topNavigation Nothing boardgroups}
 
     <h1>Hello, world

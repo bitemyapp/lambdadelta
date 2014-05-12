@@ -13,7 +13,7 @@ $doctype 5
     <title>/#{boardName board}/ - #{boardTitle board}
     <link rel="stylesheet" href="@{Stylesheet}">
   <body>
-    ^{navigation Top (Just (board, currentPage, numPages)) boardgroups}
+    ^{topNavigation (Just (board, currentPage, numPages)) boardgroups}
 
     <header>
       <img class="banner" src="@{Banner}">
@@ -25,6 +25,6 @@ $doctype 5
     $forall thread <- threads
       ^{inlineThread board thread}
 
-    ^{navigation Bottom (Just (board, currentPage, numPages)) boardgroups}
+    ^{bottomNavigation (Just (board, currentPage, numPages)) boardgroups}
 
     ^{footer}
