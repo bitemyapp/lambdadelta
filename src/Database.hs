@@ -47,7 +47,6 @@ Board
 File
     name     Text
     origname Text
-    post     PostId
 
     -- In bytes
     size     Int
