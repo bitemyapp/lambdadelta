@@ -9,23 +9,25 @@ import Handler.Error (error400, error404)
 import Handler.Post (newThread, newReply)
 import Data.Maybe (catMaybes, fromJust, isJust)
 import Database
+import MyDatabase
 import Database.Persist
 import Data.Text (Text)
+import Routes (Sitemap)
 import Types
 
 import qualified Handler.Templates as T
-import qualified Database as D
+import qualified MyDatabase as D
 import qualified Routes as R
 
 -- |Render the index page
 -- Todo: Recent images/posts
-index :: Handler
+index :: Handler Sitemap
 index = do boardlisting <- getBoardListing
            html200Response $ T.index boardlisting
 
 -- |Render a board index page
 -- Todo: Board-specific config
-board :: Text -> Int -> Handler
+board :: Text -> Int -> Handler Sitemap
 board board page = do summary_size     <- conf' "board" "summary_size"
                       threads_per_page <- conf' "board" "threads_per_page"
 
@@ -43,7 +45,7 @@ board board page = do summary_size     <- conf' "board" "summary_size"
                                threads' <- mapM (getThread summary_size) threads
                                html200Response $ T.board board boardlisting page pages threads'
 
-thread :: Text -> Int -> Handler
+thread :: Text -> Int -> Handler Sitemap
 thread board thread = do boardlisting <- getBoardListing
                          maybeBoard <- getBy $ UniqueBoardName board
 
@@ -64,7 +66,7 @@ thread board thread = do boardlisting <- getBoardListing
 -- Todo: anti-spam
 -- Todo: Only respond to POST
 -- Todo: Handle noko
-postThread :: Text -> Handler
+postThread :: Text -> Handler Sitemap
 postThread board = do
   maybeBoard <- getBy $ UniqueBoardName board
 
@@ -79,7 +81,7 @@ postThread board = do
 
 -- | Handle a request to post a new reply
 -- Todo: see todos for postThread
-postReply :: Text -> Int -> Handler
+postReply :: Text -> Int -> Handler Sitemap
 postReply board thread = do
   maybeBoard  <- getBy $ UniqueBoardName board
   case maybeBoard of
@@ -97,18 +99,18 @@ postReply board thread = do
 -------------------------
 
 -- |Generate the board listing
-getBoardListing :: RequestProcessor [[D.Board]]
+getBoardListing :: RequestProcessor Sitemap [[D.Board]]
 getBoardListing = do board_listing <- conf' "board" "board_listing"
                      listing <- mapM getBoardList board_listing
                      return $ filter ((0/=) . length) listing
 
-    where getBoardList :: [Text] -> RequestProcessor [D.Board]
+    where getBoardList :: [Text] -> RequestProcessor Sitemap [D.Board]
           getBoardList boards = do listing <- mapM (getBy . UniqueBoardName) boards
                                    return $ map unentity $ catMaybes listing
 
 -- |Get the number of pages a board has
 getNumPages :: BoardId -- ^ The board
-            -> RequestProcessor Int
+            -> RequestProcessor Sitemap Int
 getNumPages board = do threads_per_page <- conf' "board" "threads_per_page"
                        threads <- selectList [ PostBoard ==. board
                                             , PostThread ==. Nothing] []
@@ -121,7 +123,7 @@ getNumPages board = do threads_per_page <- conf' "board" "threads_per_page"
 -- |Get the thread for an OP
 getThread :: Int         -- ^ The number of recent posts to show
           -> Entity Post -- ^ The OP, as a unique database entity
-          -> RequestProcessor T.TThread
+          -> RequestProcessor Sitemap T.TThread
 getThread limit (Entity opid op) =
     do opFile <- fmap fromJust $ get . fromJust $ postFile op
 
@@ -149,7 +151,7 @@ getThread limit (Entity opid op) =
 
 -- |Get the image for a post
 getPostImage :: Entity Post -- ^ The post
-             -> RequestProcessor (Maybe D.File, Post)
+             -> RequestProcessor Sitemap (Maybe D.File, Post)
 getPostImage (Entity _ post) = case postFile post of
                                  Nothing -> return (Nothing, post)
                                  Just fileid -> do file <- get fileid

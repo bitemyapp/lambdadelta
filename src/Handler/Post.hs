@@ -20,10 +20,11 @@ import Data.Text.Encoding (decodeUtf8)
 import Data.Time.Clock (getCurrentTime)
 import Data.Hash.MD5 (Str(..), md5s)
 import Data.Maybe (isJust, fromJust, fromMaybe)
-import Database
+import MyDatabase
 import Database.Persist
 import Graphics.ImageMagick.MagickWand
 import Network.Wai.Parse (FileInfo(..), Param, lbsBackEnd, parseRequestBody)
+import Routes (Sitemap)
 import System.Directory (removeFile)
 import System.FilePath.Posix (joinPath, takeExtension)
 import System.IO.Error (catchIOError)
@@ -37,7 +38,7 @@ import qualified Network.Wai.Parse as W
 -- Todo: Take the board name, and produce a nice error when it doesn't
 -- exist.
 newThread :: BoardId -- ^ The board
-          -> ErrorT String RequestProcessor (FileId, PostId)
+          -> ErrorT String (RequestProcessor Sitemap) (FileId, PostId)
 newThread board = do
   (Just f, p) <- handlePostForm board Nothing
 
@@ -67,7 +68,7 @@ newThread board = do
 -- errors when they don't exist.
 newReply :: BoardId -- ^ The board
          -> PostId  -- ^ The OP
-         -> ErrorT String RequestProcessor (Maybe FileId, PostId)
+         -> ErrorT String (RequestProcessor Sitemap) (Maybe FileId, PostId)
 newReply board = handlePostForm board . Just
 
 -------------------------
@@ -83,7 +84,7 @@ newReply board = handlePostForm board . Just
 -- to modify the response and post
 handlePostForm :: BoardId      -- ^ The board
                -> Maybe PostId -- ^ The OP
-               -> ErrorT String RequestProcessor (Maybe FileId, PostId)
+               -> ErrorT String (RequestProcessor Sitemap) (Maybe FileId, PostId)
 handlePostForm boardId threadId = do
   request <- lift askReq
   (params, files) <- liftIO $ parseRequestBody lbsBackEnd request
@@ -110,7 +111,7 @@ commitPost :: BoardId                -- ^ The board
            -> Maybe PostId           -- ^ The OP
            -> [Param]                -- ^ The parameters
            -> [W.File BL.ByteString] -- ^ The files
-           -> RequestProcessor (Maybe FileId, PostId)
+           -> RequestProcessor Sitemap (Maybe FileId, PostId)
 commitPost boardId threadId params files = do
   let name     = decodeUtf8 <$> lookup "name"     params
   let email    = decodeUtf8 <$> lookup "email"    params
@@ -151,7 +152,7 @@ hasContent (Just (FileInfo _ _ c)) = not $ BL.null c
 handleFileUpload :: Board                  -- ^ The board
                  -> FileInfo BL.ByteString -- ^ The file
                  -> Bool                   -- ^ Whether it is spoilered
-                 -> RequestProcessor FileId
+                 -> RequestProcessor Sitemap FileId
 handleFileUpload board (FileInfo fname _ content) spoiler = do
   thumbnail_width  <- conf' "board" "thumbnail_width"
   thumbnail_height <- conf' "board" "thumbnail_height"
@@ -206,7 +207,7 @@ handleNewPost :: BoardId      -- ^ The board
               -> Maybe Text   -- ^ The comment
               -> Maybe FileId -- ^ The file ID
               -> Maybe Text   -- ^ The password
-              -> RequestProcessor PostId
+              -> RequestProcessor Sitemap PostId
 handleNewPost boardId threadId name email subject comment fileId password = do
   number  <- ((+1) . length) <$> selectList [PostBoard ==. boardId] []
   updated <- liftIO getCurrentTime
@@ -221,7 +222,7 @@ handleNewPost boardId threadId name email subject comment fileId password = do
 
 -- |Bump a thread if it's below the bump limit
 bumpThread :: PostId -- ^ The OP
-           -> RequestProcessor ()
+           -> RequestProcessor Sitemap ()
 bumpThread threadId = do
   bump_limit <- conf' "board" "bump_limit"
   replies <- length <$> selectList [PostThread ==. Just threadId] []
@@ -234,7 +235,7 @@ bumpThread threadId = do
 
 -- |Purge a thread and all its posts
 purge :: Entity Post -- ^ The thread
-      -> RequestProcessor ()
+      -> RequestProcessor Sitemap ()
 purge (Entity threadId op) = do
   posts <- selectList [ PostBoard ==. postBoard op
                      , PostThread ==. Just threadId] []
@@ -244,7 +245,7 @@ purge (Entity threadId op) = do
 
 -- |Delete a post and its associated file (if any)
 purgePost :: Entity Post -- ^ The post
-          -> RequestProcessor ()
+          -> RequestProcessor Sitemap ()
 purgePost (Entity postId post) = do
   board <- fromJust <$> get (postBoard post)
 
@@ -256,8 +257,8 @@ purgePost (Entity postId post) = do
         Just f -> do
           fileroot <- conf' "server" "file_root"
 
-          let fname = joinPath [fileroot, unpack $ boardName board, "src", unpack $ Database.fileName f]
-          let thumb = joinPath [fileroot, unpack $ boardName board, "thumb", unpack $ Database.fileName f]
+          let fname = joinPath [fileroot, unpack $ boardName board, "src", unpack $ MyDatabase.fileName f]
+          let thumb = joinPath [fileroot, unpack $ boardName board, "thumb", unpack $ MyDatabase.fileName f]
 
           liftIO $ removeFile fname `catchIOError` (\_ -> return ())
           liftIO $ removeFile thumb `catchIOError` (\_ -> return ())

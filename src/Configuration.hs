@@ -10,6 +10,7 @@ import Data.ConfigFile
 import Data.Either.Utils (forceEither)
 import System.IO.Error (catchIOError)
 import Types (RequestProcessor, askConf)
+import Web.Routes.PathInfo (PathInfo)
 
 -- |Load a configuration file by name.
 -- All errors (syntax, file access, etc) are squashed together,
@@ -62,9 +63,9 @@ get' cp ss os = forceEither $ get cp ss os
 
 -- |Get a value from the configuration in a handler, abstracting the
 -- askConf/get pattern
-conf :: (Get_C a, MonadError CPError m) => SectionSpec -> OptionSpec -> RequestProcessor (m a)
+conf :: (Get_C a, MonadError CPError m, PathInfo r) => SectionSpec -> OptionSpec -> RequestProcessor r (m a)
 conf ss os = askConf >>= \config -> return $ get config ss os
 
 -- |Get a value from the configuration in a handler unsafely
-conf' :: Get_C a => SectionSpec -> OptionSpec -> RequestProcessor a
+conf' :: (Get_C a, PathInfo r) => SectionSpec -> OptionSpec -> RequestProcessor r a
 conf' ss os = askConf >>= \config -> return $ get' config ss os
