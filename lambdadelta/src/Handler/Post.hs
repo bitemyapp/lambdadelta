@@ -27,7 +27,7 @@ import Network.Wai.Parse (FileInfo(..), Param, lbsBackEnd, parseRequestBody)
 import Routes (Sitemap)
 import System.FilePath.Posix (joinPath, takeExtension)
 import Web.Seacat.Configuration (conf')
-import Web.Seacat.Types (RequestProcessor, askReq)
+import Web.Seacat.RequestHandler.Types (RequestProcessor, askReq)
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL

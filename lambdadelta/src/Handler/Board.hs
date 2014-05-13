@@ -11,7 +11,7 @@ import Handler.Templates (TThread(..))
 import Routes (Sitemap)
 import Web.Seacat.Configuration (conf')
 import Web.Seacat.Database
-import Web.Seacat.Types
+import Web.Seacat.RequestHandler.Types (RequestProcessor)
 
 import qualified Database as D
 

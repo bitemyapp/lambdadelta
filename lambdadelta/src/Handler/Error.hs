@@ -10,7 +10,7 @@ import Network.HTTP.Types.Status ( Status
                                  , internalServerError500)
 import Routes (Sitemap)
 import Web.Seacat.RequestHandler (htmlResponse)
-import Web.Seacat.Types
+import Web.Seacat.RequestHandler.Types (Handler)
 
 import qualified Handler.Templates as T (error)
 

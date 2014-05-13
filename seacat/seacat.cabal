@@ -55,7 +55,7 @@ library
                      , Web.Seacat.Configuration
                      , Web.Seacat.Database
                      , Web.Seacat.RequestHandler
-                     , Web.Seacat.Types
+                     , Web.Seacat.RequestHandler.Types
   
   -- Modules included in this library but not exported.
   -- other-modules:       

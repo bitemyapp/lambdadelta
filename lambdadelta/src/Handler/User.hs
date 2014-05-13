@@ -12,7 +12,7 @@ import Handler.Post (newThread, newReply)
 import Routes (Sitemap)
 import Web.Seacat.Configuration (conf')
 import Web.Seacat.RequestHandler
-import Web.Seacat.Types
+import Web.Seacat.RequestHandler.Types
 
 import qualified Handler.Templates as T
 import qualified Routes as R

@@ -16,7 +16,7 @@ import Web.Routes.Wai (handleWai)
 
 import Web.Seacat.Configuration (ConfigParser, applyUserConfig, loadConfigFile, defaults, get')
 import Web.Seacat.Database (runPool, withPool, withDB)
-import Web.Seacat.Types (CommandRunner, Handler, MkUrl)
+import Web.Seacat.RequestHandler.Types (Handler, MkUrl)
 
 -- |Wrapper for seacat'' in the case where there is no config.
 seacat :: PathInfo r
@@ -67,6 +67,9 @@ die :: String -- ^ The error description
 die err = putStrLn err >> exitFailure
 
 -------------------------
+
+-- |Function which runs an IO command (eg, runserver)
+type CommandRunner = ConfigParser -> IO ()
 
 -- |Run one of the applications, depending on the command
 run :: PathInfo r

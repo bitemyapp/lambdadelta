@@ -1,4 +1,4 @@
-module Web.Seacat.Types where
+module Web.Seacat.RequestHandler.Types where
 
 import Control.Monad.Trans.Reader (ReaderT, asks)
 import Data.ConfigFile (ConfigParser)
@@ -14,9 +14,6 @@ type MkUrl r = r -> [(Text, Maybe Text)] -> Text
 -- Todo: Should probably use SqlPersistT
 type RequestProcessor r = ReaderT (ConfigParser, MkUrl r, Request) SqlPersistM
 type Handler r = RequestProcessor r Response
-
--- |Function which runs an IO command (eg, runserver)
-type CommandRunner = ConfigParser -> IO ()
 
 -- |Get the configuration from a RequestProcessor
 askConf :: PathInfo r => RequestProcessor r ConfigParser

@@ -15,7 +15,7 @@ import Data.ConfigFile
 import Data.Either.Utils (forceEither)
 import System.IO.Error (catchIOError)
 import Web.Routes.PathInfo (PathInfo)
-import Web.Seacat.Types (RequestProcessor, askConf)
+import Web.Seacat.RequestHandler.Types (RequestProcessor, askConf)
 
 -- |Load a configuration file by name.
 -- All errors (syntax, file access, etc) are squashed together,

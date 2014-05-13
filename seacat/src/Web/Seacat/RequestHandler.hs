@@ -16,7 +16,7 @@ import Text.Blaze.Html.Renderer.Utf8 (renderHtmlBuilder)
 import Text.Hamlet (HtmlUrl)
 import Web.Routes.PathInfo (PathInfo)
 import Web.Seacat.Configuration (conf')
-import Web.Seacat.Types
+import Web.Seacat.RequestHandler.Types
 
 -- |Produce a 200 OK response from the given HTML
 html200Response :: PathInfo r => HtmlUrl r -> Handler r

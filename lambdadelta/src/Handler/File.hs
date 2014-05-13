@@ -9,7 +9,7 @@ import System.FilePath.Posix (joinPath)
 import System.Random (randomRIO)
 import Web.Seacat.Configuration (conf')
 import Web.Seacat.RequestHandler (respondFile, respondFile')
-import Web.Seacat.Types (Handler)
+import Web.Seacat.RequestHandler.Types (Handler)
 
 -- |Process a request for a static file
 -- This isn't the best way to serve static files, your actual web
