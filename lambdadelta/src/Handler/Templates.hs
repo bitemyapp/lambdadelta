@@ -15,6 +15,7 @@ import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import Numeric (showGFloat)
 import Routes
 import System.Locale (defaultTimeLocale)
+import Text.Blaze.Html (preEscapedToHtml)
 import Text.Hamlet (HtmlUrl, hamletFile)
 
 import qualified Database as D

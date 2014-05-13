@@ -18,6 +18,7 @@ import Data.Hash.MD5 (Str(..), md5s)
 import Data.Maybe (isJust, fromJust, fromMaybe)
 import Data.Text (Text, null, pack, strip, unpack)
 import Data.Text.Encoding (decodeUtf8)
+import Data.Text.Lazy (toStrict)
 import Data.Time.Clock (getCurrentTime)
 import Database
 import Database.Persist
@@ -26,11 +27,14 @@ import Handler.Admin (bump, deleteThread)
 import Network.Wai.Parse (FileInfo(..), Param, lbsBackEnd, parseRequestBody)
 import Routes (Sitemap)
 import System.FilePath.Posix (joinPath, takeExtension)
+import Text.Blaze.Html (Html, toHtml, preEscapedToHtml)
+import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Web.Seacat.Configuration (conf')
 import Web.Seacat.RequestHandler.Types (RequestProcessor, askReq)
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
+import qualified Data.Text as T
 import qualified Network.Wai.Parse as W
 
 -- |Post a new thread, returning the file and post IDs on success.
@@ -121,11 +125,13 @@ commitPost boardId threadId params files = do
   let file    = lookup "file" files
   let spoiler = isJust $ lookup "spoiler" params
 
+  let comment' = processComment $ "" `fromMaybe` comment
+
   board  <- fromJust <$> get boardId
   fileId <- if hasContent file
            then Just <$> handleFileUpload board (fromJust file) spoiler
            else return Nothing
-  postId <- handleNewPost boardId threadId name email subject comment fileId password
+  postId <- handleNewPost boardId threadId name email subject comment' fileId password
 
   -- bump the thread if there is a thread to bump
   return () `maybe` bump $ threadId
@@ -193,7 +199,7 @@ handleNewPost :: BoardId      -- ^ The board
               -> Maybe Text   -- ^ The name
               -> Maybe Text   -- ^ The email
               -> Maybe Text   -- ^ The subject
-              -> Maybe Text   -- ^ The comment
+              -> Html         -- ^ The comment
               -> Maybe FileId -- ^ The file ID
               -> Maybe Text   -- ^ The password
               -> RequestProcessor Sitemap PostId
@@ -204,10 +210,18 @@ handleNewPost boardId threadId name email subject comment fileId password = do
   let name'     = if hasValue name then fromJust name else "Anonymous"
   let email'    = fromMaybe "" email
   let subject'  = fromMaybe "" subject
-  let comment'  = fromMaybe "" comment
   let password' = fromMaybe "" password
 
-  insert $ Post number boardId threadId updated updated fileId name' email' subject' comment' password'
+  insert $ Post number boardId threadId updated updated fileId name' email' subject' (toStrict $ renderHtml comment) password'
+
+-------------------------
+
+-- |Perform any processing on a comment before saving it: newlines,
+-- word replacement, etc.
+processComment :: Text -- ^ The original comment
+               -> Html
+processComment comment = preEscapedToHtml $ T.replace "\n" "<br>" $ escape comment
+  where escape = toStrict . renderHtml . toHtml
 
 -------------------------
 

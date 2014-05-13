@@ -33,7 +33,7 @@
       $if replyButton
         <a href="@{Thread (boardName board) (postNumber op)}">[Reply]
     <div .body>
-      #{postComment op}
+      #{preEscapedToHtml $ postComment op}
 
     $if and [posts /= 0, imageposts /= 0]
       <p class="omitted">
@@ -74,5 +74,5 @@
         <a href="@{File (boardName board) (fileName image)}">
           <img src="@{Thumb (boardName board) (fileName image)}">
       <div .body>
-        #{postComment post}
+        #{preEscapedToHtml $ postComment post}
     <br>
