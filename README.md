@@ -93,7 +93,7 @@ There are some directoryes that Λδ expects to exist, relative to
  - /board/, home for all board-specific things
  - /board/src/, images uploaded to a board
  - /board/thumb/, thumbnails of images uploaded to a board
- - /banner.png, banner to display
+ - /banners/, banners to display
  - /style.css, stylesheet
 
 Configuration

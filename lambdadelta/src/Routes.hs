@@ -8,7 +8,6 @@ import Web.Routes.PathInfo
 
 -- |The possible routes on the imageboard
 -- Todo: Stylesheet takes the name of the stylesheet as a parameter
--- Todo: Figure out some way of dynamically choosing banner
 data Sitemap = Index              -- ^ site index: /
              | Board Text Int     -- ^ board index: /b/<page>
              | Thread Text Int    -- ^ thread display: /b/res/123

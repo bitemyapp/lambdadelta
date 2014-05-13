@@ -5,17 +5,15 @@ module Main where
 import Control.Monad (void)
 import Data.ConfigFile (ConfigParser, emptyCP, readstring)
 import Data.Either.Utils (forceEither)
-import Data.Text (Text, unpack)
 import Database (migrateAll)
 import Database.Persist (insert)
 import Database.Persist.Sql (SqlPersistM)
 import Handler.Error
 import Handler.User
+import Handler.File
 import Routes (Sitemap(..))
-import System.FilePath.Posix (joinPath)
 import Web.Routes.PathInfo (toPathSegments)
 import Web.Seacat (seacat')
-import Web.Seacat.RequestHandler (respondFile)
 import Web.Seacat.Types (Handler)
 
 import qualified Database as D
@@ -36,16 +34,9 @@ route (Board b p)     = board b p
 route (Thread b t)    = thread b t
 route (PostThread b)  = postThread b
 route (PostReply b t) = postReply b t
+route Banner          = banner
 route Error404        = error404 "File not found"
 route path            = static (error404 "File not found") $ toPathSegments path
-
--- |Process a request for a static file
--- This isn't the best way to serve static files, your actual web
--- server should really do this.
-static :: Handler Sitemap -- ^ 404 handler
-       -> [Text]          -- ^ The file path components
-       -> Handler Sitemap
-static on404 path = respondFile on404 . joinPath $ map unpack path
 
 -- |Default configuration values
 defaults :: ConfigParser
@@ -66,4 +57,5 @@ defaults = forceEither . readstring emptyCP $ unlines
   , "thumbnail_width = 300"
   , "thumbnail_height = 300"
   , "bump_limit = 300"
+  , "banner_dir = banners"
   ]
