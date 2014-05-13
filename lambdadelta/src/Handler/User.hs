@@ -3,6 +3,7 @@
 module Handler.User (index, board, thread, Handler.User.postThread, postReply) where
 
 import Control.Applicative ((<$>))
+import Control.Monad.Trans.Error (ErrorT)
 import Control.Monad.Trans.Error (runErrorT)
 import Data.Maybe (catMaybes, fromJust, isJust)
 import Data.Text (Text)
@@ -23,79 +24,86 @@ import qualified Routes as R
 -- |Render the index page
 -- Todo: Recent images/posts
 index :: Handler Sitemap
-index = do boardlisting <- getBoardListing
-           html200Response $ T.index boardlisting
+index = getBoardListing >>= html200Response . T.index
 
 -- |Render a board index page
 -- Todo: Board-specific config
 board :: Text -> Int -> Handler Sitemap
-board board page = do summary_size     <- conf' "board" "summary_size"
-                      threads_per_page <- conf' "board" "threads_per_page"
+board board page = withBoard board $ \(Entity boardId board') -> do
+                     summary_size     <- conf' "board" "summary_size"
+                     threads_per_page <- conf' "board" "threads_per_page"
+                     boardlisting <- getBoardListing
 
-                      boardlisting <- getBoardListing
-                      maybeBoard <- getBy $ UniqueBoardName board
-
-                      case maybeBoard of
-                        Nothing -> error404 "No such board"
-                        Just (Entity boardid board) ->
-                            do threads <- selectList [PostThread ==. Nothing]
-                                                    [ Desc PostUpdated
-                                                    , LimitTo threads_per_page
-                                                    , OffsetBy $ (page - 1) * threads_per_page]
-                               pages <- getNumPages boardid
-                               threads' <- mapM (getThread summary_size) threads
-                               html200Response $ T.board board boardlisting page pages threads'
+                     threads <- selectList [ PostBoard ==. boardId
+                                          , PostThread ==. Nothing]
+                                          [ Desc PostUpdated
+                                          , LimitTo threads_per_page
+                                          , OffsetBy $ (page - 1) * threads_per_page]
+                     pages <- getNumPages boardId
+                     threads' <- mapM (getThread summary_size) threads
+                     html200Response $ T.board board' boardlisting page pages threads'
 
 thread :: Text -> Int -> Handler Sitemap
-thread board thread = do boardlisting <- getBoardListing
-                         maybeBoard <- getBy $ UniqueBoardName board
-
-                         case maybeBoard of
-                           Nothing -> error404 "No such board"
-                           Just (Entity boardid board) -> do
-                             maybeThread <- selectFirst [ PostBoard  ==. boardid
-                                                       , PostThread ==. Nothing
-                                                       , PostNumber ==. thread]
-                                                       [ Asc PostTime]
-                             case maybeThread of
-                               Nothing -> error404 "No such thread"
-                               Just post -> do
-                                 thread <- getThread (-1) post
-                                 html200Response $ T.thread board boardlisting thread
+thread board thread = withBoard board $ \(Entity boardId board') ->
+                        withThread boardId thread $ \thread' -> do
+                          boardlisting <- getBoardListing
+                          thread'' <- getThread (-1) thread'
+                          html200Response $ T.thread board' boardlisting thread''
 
 -- |Handle a request to post a new thread
 -- Todo: anti-spam
 -- Todo: Only respond to POST
 -- Todo: Handle noko
 postThread :: Text -> Handler Sitemap
-postThread board = do
-  maybeBoard <- getBy $ UniqueBoardName board
-
-  case maybeBoard of
-    Just (Entity boardId _) -> do
-      result <- runErrorT $ newThread boardId
-      case result of
-        Right _ -> redirect $ R.Board board 1
-        Left err -> error400 err
-
-    Nothing -> error404 "No such board"
+postThread board = withBoard board $ \(Entity boardId _) ->
+  possiblyRedirect (newThread boardId) $ R.Board board 1
 
 -- | Handle a request to post a new reply
 -- Todo: see todos for postThread
 postReply :: Text -> Int -> Handler Sitemap
-postReply board thread = do
-  maybeBoard  <- getBy $ UniqueBoardName board
+postReply board thread = withBoard board $ \(Entity boardId _) ->
+  withThread boardId thread $ \(Entity threadId _) ->
+    possiblyRedirect (newReply boardId threadId) $ R.Board board 1
+
+-------------------------
+
+-- |Run a handler which takes a board as a parameter, giving a 404
+-- error if the board doesn't exist.
+withBoard :: Text -- ^ The board name
+          -> (Entity Board -> Handler Sitemap) -- ^ The handler
+          -> Handler Sitemap
+withBoard board handler = do
+  maybeBoard <- getBy $ UniqueBoardName board
   case maybeBoard of
-    Just (Entity boardId _) -> do
-      maybeThread <- getBy $ UniquePostID thread boardId
-      case maybeThread of
-        Just (Entity threadId _) -> do
-          result <- runErrorT $ newReply boardId threadId
-          case result of
-            Right _ -> redirect $ R.Board board 1
-            Left err -> error400 err
-        Nothing -> error404 "No such thread"
+    Just b  -> handler b
     Nothing -> error404 "No such board"
+
+-- |Run a handler which takes a thread as a parameter, giving a 404
+-- error if the thread doesn't exist.
+withThread :: BoardId -- ^ The board
+           -> Int     -- ^ The thread number
+           -> (Entity Post -> Handler Sitemap) -- ^ The handler
+           -> Handler Sitemap
+withThread boardId thread handler = do
+  maybeThread <- selectFirst [ PostNumber ==. thread
+                            , PostThread ==. Nothing
+                            , PostBoard  ==. boardId ] []
+  case maybeThread of
+    Just t  -> handler t
+    Nothing -> error404 "No such thread"
+
+-------------------------
+
+-- |Run a possibly failing handler, and redirect on success.
+-- Todo: Add some way of defining the redirect later (ie, noko)
+possiblyRedirect :: ErrorT String (RequestProcessor Sitemap) a -- ^ The possibly-failing handler
+                 -> Sitemap -- ^ The location to redirect to
+                 -> Handler Sitemap
+possiblyRedirect failing target = do
+  result <- runErrorT failing
+  case result of
+    Right _  -> redirect target
+    Left err -> error400 err
 
 -------------------------
 
