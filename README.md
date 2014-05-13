@@ -49,12 +49,20 @@ commands are as follows,
  - migrate: Perform a database migration (includes creating a
             database).
  - populate: Populate the database with sample data.
- - runserver: Run the Λδ server.
+ - runserver: Run the Seacat server.
 
 Configuration
 -------------
 
 See examples/seacat.conf
+
+Documentation
+-------------
+
+Sources have Haddock comments, and you can produce pretty HTML
+documentation from this,
+
+    cabal haddock
 
 Λδ, an imageboard written in Haskell
 ====================================
