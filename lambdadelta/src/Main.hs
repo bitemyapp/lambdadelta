@@ -14,14 +14,14 @@ import Handler.User
 import Routes (Sitemap(..))
 import System.FilePath.Posix (joinPath)
 import Web.Routes.PathInfo (toPathSegments)
-import Web.Seacat (runner)
+import Web.Seacat (seacat')
 import Web.Seacat.RequestHandler (respondFile)
 import Web.Seacat.Types (Handler)
 
 import qualified Database as D
 
 main :: IO ()
-main = runner (Just defaults) route error500 migrateAll populate
+main = seacat' defaults route error500 migrateAll populate
 
 -- |Populate the database with sample data
 populate :: SqlPersistM ()

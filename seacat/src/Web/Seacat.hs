@@ -1,4 +1,4 @@
-module Web.Seacat (runner) where
+module Web.Seacat (seacat, seacat') where
 
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (runReaderT)
@@ -16,15 +16,34 @@ import Web.Seacat.Configuration (ConfigParser, applyUserConfig, loadConfigFile, 
 import Web.Seacat.Database (runPool, withPool, withDB)
 import Web.Seacat.Types (CommandRunner, Handler, MkUrl)
 
--- |Fire up the appropriate process, depending on the command.
-runner :: PathInfo r
-       => Maybe ConfigParser    -- ^ Optional configuration (overrides defaults)
-       -> (r -> Handler r)       -- ^ Routing function
+-- |Wrapper for seacat'' in the case where there is no config.
+seacat :: PathInfo r
+       => (r -> Handler r)       -- ^ Routing function
        -> (String -> Handler r)  -- ^ Top-level error handling function
        -> Migration SqlPersistM -- ^ Database migration handler
        -> SqlPersistM ()         -- ^ Database populator
        -> IO ()
-runner cfg route on500 migration pop = do
+seacat = seacat'' Nothing
+
+-- |Wrapper for seacat'' in the case where there is config.
+seacat' :: PathInfo r
+        => ConfigParser          -- ^ Application-specific default configuration (overrides defaults)
+        -> (r -> Handler r)       -- ^ Routing function
+        -> (String -> Handler r)  -- ^ Top-level error handling function
+        -> Migration SqlPersistM -- ^ Database migration handler
+        -> SqlPersistM ()         -- ^ Database populator
+        -> IO ()
+seacat' cfg = seacat'' $ Just cfg
+
+-- |Fire up the appropriate process, depending on the command.
+seacat'' :: PathInfo r
+         => Maybe ConfigParser    -- ^ Optional configuration (overrides defaults)
+         -> (r -> Handler r)       -- ^ Routing function
+         -> (String -> Handler r)  -- ^ Top-level error handling function
+         -> Migration SqlPersistM -- ^ Database migration handler
+         -> SqlPersistM ()         -- ^ Database populator
+         -> IO ()
+seacat'' cfg route on500 migration pop = do
   args <- getArgs
 
   when (length args < 1) $
@@ -76,7 +95,7 @@ runserver route on500 _ _ conf = do
 
   putStrLn $ "Starting Seacat on " ++ host ++ ":" ++ show port
   withPool (fromString connstr) poolsize $
-    runSettings settings . seacat route on500 conf
+    runSettings settings . runner route on500 conf
 
 -- |Migrate the database
 migrate :: a -> b
@@ -102,15 +121,15 @@ badcommand _ _ _ _ _ = die "Unknown command"
 
 -------------------------
 
--- |seacat is the actual WAI application. It takes a request, handles
+-- |runner is the actual WAI application. It takes a request, handles
 -- it, and produces a response.
-seacat :: PathInfo r
+runner :: PathInfo r
        => (r -> Handler r)      -- ^ Routing function
        -> (String -> Handler r) -- ^ Top-level error handling function
        -> ConfigParser         -- ^ The configuration
        -> ConnectionPool       -- ^ Database connection reference
        -> Application
-seacat route on500 conf = let webroot = get' conf "server" "web_root"
+runner route on500 conf = let webroot = get' conf "server" "web_root"
                           in handleWai (fromString webroot) . process route on500 conf
 
 -- |Route and process a request
