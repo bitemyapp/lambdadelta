@@ -8,7 +8,7 @@ module Handler.Post ( newThread
 import Prelude hiding (concat, null)
 
 import Control.Applicative ((<$>))
-import Control.Monad (unless, when)
+import Control.Monad (unless)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Error (ErrorT, throwError)
@@ -22,11 +22,10 @@ import Data.Time.Clock (getCurrentTime)
 import Database
 import Database.Persist
 import Graphics.ImageMagick.MagickWand
+import Handler.Admin (bump, deleteThread)
 import Network.Wai.Parse (FileInfo(..), Param, lbsBackEnd, parseRequestBody)
 import Routes (Sitemap)
-import System.Directory (removeFile)
 import System.FilePath.Posix (joinPath, takeExtension)
-import System.IO.Error (catchIOError)
 import Web.Seacat.Configuration (conf')
 import Web.Seacat.Types (RequestProcessor, askReq)
 
@@ -57,7 +56,7 @@ newThread board = do
       threads <- selectList [ PostThread ==. Nothing
                            , PostBoard ==. board
                            , PostUpdated <. postUpdated thread] []
-      mapM_ purge threads
+      mapM_ deleteThread threads
     Nothing -> return ()
 
   return (f, p)
@@ -129,22 +128,12 @@ commitPost boardId threadId params files = do
   postId <- handleNewPost boardId threadId name email subject comment fileId password
 
   -- bump the thread if there is a thread to bump
-  return () `maybe` bumpThread $ threadId
+  return () `maybe` bump $ threadId
 
   -- return the relevant information
   return (fileId, postId)
 
 -------------------------
-
--- |Check if a value is set and is nonempty
-hasValue :: Maybe Text -> Bool
-hasValue Nothing = False
-hasValue (Just t) = not $ null (strip t)
-
--- |Check if a file is nonempty
-hasContent :: Maybe (FileInfo BL.ByteString) -> Bool
-hasContent Nothing = False
-hasContent (Just (FileInfo _ _ c)) = not $ BL.null c
 
 -- |Upload a possible file, returning the ID
 -- Todo: Implement maximum file sizes
@@ -220,54 +209,17 @@ handleNewPost boardId threadId name email subject comment fileId password = do
 
   insert $ Post number boardId threadId updated updated fileId name' email' subject' comment' password'
 
--- |Bump a thread if it's below the bump limit
-bumpThread :: PostId -- ^ The OP
-           -> RequestProcessor Sitemap ()
-bumpThread threadId = do
-  bump_limit <- conf' "board" "bump_limit"
-  replies <- length <$> selectList [PostThread ==. Just threadId] []
-
-  when (replies < bump_limit) $ do
-    now <- liftIO getCurrentTime
-    update threadId [PostUpdated =. now]
-
 -------------------------
 
--- |Purge a thread and all its posts
-purge :: Entity Post -- ^ The thread
-      -> RequestProcessor Sitemap ()
-purge (Entity threadId op) = do
-  posts <- selectList [ PostBoard ==. postBoard op
-                     , PostThread ==. Just threadId] []
+-- |Check if a value is set and is nonempty
+hasValue :: Maybe Text -> Bool
+hasValue Nothing = False
+hasValue (Just t) = not $ null (strip t)
 
-  mapM_ purgePost posts
-  purgePost $ Entity threadId op
-
--- |Delete a post and its associated file (if any)
-purgePost :: Entity Post -- ^ The post
-          -> RequestProcessor Sitemap ()
-purgePost (Entity postId post) = do
-  board <- fromJust <$> get (postBoard post)
-
-  -- Delete the file and thumbnail
-  case postFile post of
-    Just fid -> do
-      file <- get fid
-      case file of
-        Just f -> do
-          fileroot <- conf' "server" "file_root"
-
-          let fname = joinPath [fileroot, unpack $ boardName board, "src", unpack $ Database.fileName f]
-          let thumb = joinPath [fileroot, unpack $ boardName board, "thumb", unpack $ Database.fileName f]
-
-          liftIO $ removeFile fname `catchIOError` (\_ -> return ())
-          liftIO $ removeFile thumb `catchIOError` (\_ -> return ())
-        _ -> return ()
-    _ -> return ()
-
-  -- Delete the post
-  delete postId
-  return ()
+-- |Check if a file is nonempty
+hasContent :: Maybe (FileInfo BL.ByteString) -> Bool
+hasContent Nothing = False
+hasContent (Just (FileInfo _ _ c)) = not $ BL.null c
 
 -------------------------
 
