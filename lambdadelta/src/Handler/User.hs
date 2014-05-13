@@ -2,9 +2,7 @@
 
 module Handler.User (index, board, thread, Handler.User.postThread, postReply) where
 
-import Control.Applicative ((<$>))
 import Control.Monad.Trans.Error (ErrorT, runErrorT)
-import Data.Maybe (catMaybes, fromJust, isJust)
 import Data.Text (Text)
 import Database
 import Database.Persist
@@ -13,12 +11,10 @@ import Handler.Error (error400, error404)
 import Handler.Post (newThread, newReply)
 import Routes (Sitemap)
 import Web.Seacat.Configuration (conf')
-import Web.Seacat.Database
 import Web.Seacat.RequestHandler
 import Web.Seacat.Types
 
 import qualified Handler.Templates as T
-import qualified Database as D
 import qualified Routes as R
 
 -- |Render the index page
