@@ -9,8 +9,9 @@ import Database (migrateAll)
 import Database.Persist (insert)
 import Database.Persist.Sql (SqlPersistM)
 import Handler.Error
-import Handler.User
 import Handler.File
+import Handler.User
+import Network.HTTP.Types.Method (StdMethod(..))
 import Routes (Sitemap(..))
 import Web.Routes.PathInfo (toPathSegments)
 import Web.Seacat (seacat')
@@ -28,15 +29,18 @@ populate = do
   void $ insert board
 
 -- |Route a request to a handler
-route :: Sitemap -> Handler Sitemap
-route Index           = index
-route (Board b p)     = board b p
-route (Thread b t)    = thread b t
-route (PostThread b)  = postThread b
-route (PostReply b t) = postReply b t
-route Banner          = banner
-route Error404        = error404 "File not found"
-route path            = static (error404 "File not found") $ toPathSegments path
+-- These pattern matches must cover all cases, as otherwise an
+-- internal server error might be raised in Seacat
+route :: StdMethod -> Sitemap -> Handler Sitemap
+route GET  Index           = index
+route GET  (Board b p)     = board b p
+route GET  (Thread b t)    = thread b t
+route GET  Banner          = banner
+route GET  Error404        = error404 "File not found"
+route GET  path            = static (error404 "File not found") $ toPathSegments path
+route POST (PostThread b)  = postThread b
+route POST (PostReply b t) = postReply b t
+route _ _                  = error405 "Method not allowed"
 
 -- |Default configuration values
 defaults :: ConfigParser

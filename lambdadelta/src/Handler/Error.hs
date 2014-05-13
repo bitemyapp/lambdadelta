@@ -1,10 +1,12 @@
 module Handler.Error ( error400
                      , error404
+                     , error405
                      , error500) where
 
 import Network.HTTP.Types.Status ( Status
                                  , badRequest400
                                  , notFound404
+                                 , methodNotAllowed405
                                  , internalServerError500)
 import Routes (Sitemap)
 import Web.Seacat.RequestHandler (htmlResponse)
@@ -21,6 +23,11 @@ error400 = Handler.Error.error badRequest400
 error404 :: String -- ^ The error text
          -> Handler Sitemap
 error404 = Handler.Error.error notFound404
+
+-- |Send a 405 error
+error405 :: String -- ^ The error text
+         -> Handler Sitemap
+error405 = Handler.Error.error methodNotAllowed405
 
 -- |Send a 500 error (nto that these will ever happen, right?)
 error500 :: String -- ^ The error text
