@@ -26,25 +26,25 @@ index = listing >>= html200Response . T.index
 -- Todo: Board-specific config
 board :: Text -> Int -> Handler Sitemap
 board board page = withBoard board $ \(Entity boardId board') -> do
-                     summary_size     <- conf' "board" "summary_size"
-                     threads_per_page <- conf' "board" "threads_per_page"
-                     boardlisting <- listing
+  summary_size     <- conf' "board" "summary_size"
+  threads_per_page <- conf' "board" "threads_per_page"
+  boardlisting <- listing
 
-                     threads <- selectList [ PostBoard ==. boardId
-                                          , PostThread ==. Nothing]
-                                          [ Desc PostUpdated
-                                          , LimitTo threads_per_page
-                                          , OffsetBy $ (page - 1) * threads_per_page]
-                     pages    <- numPages boardId
-                     threads' <- mapM (getThread summary_size) threads
-                     html200Response $ T.board board' boardlisting page pages threads'
+  threads <- selectList [ PostBoard ==. boardId
+                       , PostThread ==. Nothing]
+                       [ Desc PostUpdated
+                       , LimitTo threads_per_page
+                       , OffsetBy $ (page - 1) * threads_per_page]
+  pages    <- numPages boardId
+  threads' <- mapM (getThread summary_size) threads
+  html200Response $ T.board board' boardlisting page pages threads'
 
 thread :: Text -> Int -> Handler Sitemap
 thread board thread = withBoard board $ \(Entity boardId board') ->
-                        withThread boardId thread $ \thread' -> do
-                          boardlisting <- listing
-                          thread'' <- getThread (-1) thread'
-                          html200Response $ T.thread board' boardlisting thread''
+  withThread boardId thread $ \thread' -> do
+    boardlisting <- listing
+    thread'' <- getThread (-1) thread'
+    html200Response $ T.thread board' boardlisting thread''
 
 -- |Handle a request to post a new thread
 -- Todo: anti-spam
@@ -100,5 +100,3 @@ possiblyRedirect failing target = do
   case result of
     Right _  -> redirect target
     Left err -> error400 err
-
--------------------------
