@@ -15,6 +15,7 @@ import Network.HTTP.Types.Method (StdMethod(..))
 import Routes (Sitemap(..))
 import Web.Routes.PathInfo (toPathSegments)
 import Web.Seacat (seacat')
+import Web.Seacat.RequestHandler.Middleware (onPost)
 import Web.Seacat.RequestHandler.Types (Handler)
 
 import qualified Database as D
@@ -37,9 +38,9 @@ route GET  (Board b p)     = board b p
 route GET  (Thread b t)    = thread b t
 route GET  Banner          = banner
 route GET  Error404        = error404 "File not found"
+route _    (PostThread b)  = error405 "Method not allowed" `onPost` postThread b
+route _    (PostReply b t) = error405 "Method not allowed" `onPost` postReply b t
 route GET  path            = static (error404 "File not found") $ toPathSegments path
-route POST (PostThread b)  = postThread b
-route POST (PostReply b t) = postReply b t
 route _ _                  = error405 "Method not allowed"
 
 -- |Default configuration values
