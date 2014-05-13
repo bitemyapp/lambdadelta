@@ -3,12 +3,12 @@
 module Handler.User (index, board, thread, Handler.User.postThread, postReply) where
 
 import Control.Applicative ((<$>))
-import Control.Monad.Trans.Error (ErrorT)
-import Control.Monad.Trans.Error (runErrorT)
+import Control.Monad.Trans.Error (ErrorT, runErrorT)
 import Data.Maybe (catMaybes, fromJust, isJust)
 import Data.Text (Text)
 import Database
 import Database.Persist
+import Handler.Board (listing, numPages, getThread)
 import Handler.Error (error400, error404)
 import Handler.Post (newThread, newReply)
 import Routes (Sitemap)
@@ -24,7 +24,7 @@ import qualified Routes as R
 -- |Render the index page
 -- Todo: Recent images/posts
 index :: Handler Sitemap
-index = getBoardListing >>= html200Response . T.index
+index = listing >>= html200Response . T.index
 
 -- |Render a board index page
 -- Todo: Board-specific config
@@ -32,21 +32,21 @@ board :: Text -> Int -> Handler Sitemap
 board board page = withBoard board $ \(Entity boardId board') -> do
                      summary_size     <- conf' "board" "summary_size"
                      threads_per_page <- conf' "board" "threads_per_page"
-                     boardlisting <- getBoardListing
+                     boardlisting <- listing
 
                      threads <- selectList [ PostBoard ==. boardId
                                           , PostThread ==. Nothing]
                                           [ Desc PostUpdated
                                           , LimitTo threads_per_page
                                           , OffsetBy $ (page - 1) * threads_per_page]
-                     pages <- getNumPages boardId
+                     pages    <- numPages boardId
                      threads' <- mapM (getThread summary_size) threads
                      html200Response $ T.board board' boardlisting page pages threads'
 
 thread :: Text -> Int -> Handler Sitemap
 thread board thread = withBoard board $ \(Entity boardId board') ->
                         withThread boardId thread $ \thread' -> do
-                          boardlisting <- getBoardListing
+                          boardlisting <- listing
                           thread'' <- getThread (-1) thread'
                           html200Response $ T.thread board' boardlisting thread''
 
@@ -106,59 +106,3 @@ possiblyRedirect failing target = do
     Left err -> error400 err
 
 -------------------------
-
--- |Generate the board listing
-getBoardListing :: RequestProcessor Sitemap [[D.Board]]
-getBoardListing = do board_listing <- conf' "board" "board_listing"
-                     listing <- mapM getBoardList board_listing
-                     return $ filter ((0/=) . length) listing
-
-    where getBoardList :: [Text] -> RequestProcessor Sitemap [D.Board]
-          getBoardList boards = do listing <- mapM (getBy . UniqueBoardName) boards
-                                   return $ map unentity $ catMaybes listing
-
--- |Get the number of pages a board has
-getNumPages :: BoardId -- ^ The board
-            -> RequestProcessor Sitemap Int
-getNumPages board = do threads_per_page <- conf' "board" "threads_per_page"
-                       threads <- selectList [ PostBoard ==. board
-                                            , PostThread ==. Nothing] []
-
-                       case length threads `quotRem` threads_per_page of
-                         (0, _) -> return 1
-                         (q, r) | r /= 0 -> return $ q + 1
-                         (q, _) -> return q
-
--- |Get the thread for an OP
-getThread :: Int         -- ^ The number of recent posts to show
-          -> Entity Post -- ^ The OP, as a unique database entity
-          -> RequestProcessor Sitemap T.TThread
-getThread limit (Entity opid op) =
-    do opFile <- fmap fromJust $ get . fromJust $ postFile op
-
-       replies <- length <$> selectList [PostThread ==. Just opid] []
-
-       imageReplies <- length <$> selectList [ PostThread ==. Just opid
-                                               , PostFile   !=. Nothing
-                                               ] []
-
-       posts <- reverse <$> selectList [PostThread ==. Just opid]
-                 (if limit < 0
-                  then [Desc PostUpdated]
-                  else [Desc PostUpdated, LimitTo limit])
-
-       posts' <- mapM getPostImage posts
-
-       let omittedReplies = replies - length posts'
-       let omittedImages  = imageReplies - length (filter (isJust . fst) posts')
-
-       return $ T.TThread opFile op omittedReplies omittedImages posts'
-
-
--- |Get the image for a post
-getPostImage :: Entity Post -- ^ The post
-             -> RequestProcessor Sitemap (Maybe D.File, Post)
-getPostImage (Entity _ post) = case postFile post of
-                                 Nothing -> return (Nothing, post)
-                                 Just fileid -> do file <- get fileid
-                                                   return (file, post)
