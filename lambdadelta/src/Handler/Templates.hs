@@ -10,14 +10,14 @@ import Data.Maybe (isNothing)
 import Data.Text (Text, pack, null, strip)
 import Data.Text.Encoding (decodeUtf8)
 import Data.Time.Format (formatTime)
-import MyDatabase hiding (Board, File, Post)
+import Database hiding (Board, File, Post)
 import Network.HTTP.Types.Status (Status, statusCode, statusMessage)
 import Numeric (showGFloat)
 import Routes
 import System.Locale (defaultTimeLocale)
 import Text.Hamlet (HtmlUrl, hamletFile)
 
-import qualified MyDatabase as D
+import qualified Database as D
 
 -- |Navigation bar position type
 -- This isn't exported as the navigation template is only included by other

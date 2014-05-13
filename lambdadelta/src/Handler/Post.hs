@@ -9,18 +9,17 @@ import Prelude hiding (concat, null)
 
 import Control.Applicative ((<$>))
 import Control.Monad (unless, when)
+import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Error (ErrorT, throwError)
-import Control.Monad.IO.Class (liftIO)
-import Configuration (conf')
 import Data.ByteString (concat)
 import Data.Char (chr)
+import Data.Hash.MD5 (Str(..), md5s)
+import Data.Maybe (isJust, fromJust, fromMaybe)
 import Data.Text (Text, null, pack, strip, unpack)
 import Data.Text.Encoding (decodeUtf8)
 import Data.Time.Clock (getCurrentTime)
-import Data.Hash.MD5 (Str(..), md5s)
-import Data.Maybe (isJust, fromJust, fromMaybe)
-import MyDatabase
+import Database
 import Database.Persist
 import Graphics.ImageMagick.MagickWand
 import Network.Wai.Parse (FileInfo(..), Param, lbsBackEnd, parseRequestBody)
@@ -28,7 +27,8 @@ import Routes (Sitemap)
 import System.Directory (removeFile)
 import System.FilePath.Posix (joinPath, takeExtension)
 import System.IO.Error (catchIOError)
-import Types (RequestProcessor, askReq)
+import Web.Seacat.Configuration (conf')
+import Web.Seacat.Types (RequestProcessor, askReq)
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
@@ -185,8 +185,8 @@ handleFileUpload board (FileInfo fname _ content) spoiler = do
     let h = fromIntegral height :: Float
 
     let (width', height') = if w / thumbnail_width > h / thumbnail_height
-                            then (floor $ thumbnail_width, floor $ thumbnail_width * h / w)
-                            else (floor $ thumbnail_height * w / h, floor $ thumbnail_height)
+                            then (floor thumbnail_width, floor $ thumbnail_width * h / w)
+                            else (floor $ thumbnail_height * w / h, floor thumbnail_height)
 
     (_, w) <- magickWand
     readImageBlob w img
@@ -257,8 +257,8 @@ purgePost (Entity postId post) = do
         Just f -> do
           fileroot <- conf' "server" "file_root"
 
-          let fname = joinPath [fileroot, unpack $ boardName board, "src", unpack $ MyDatabase.fileName f]
-          let thumb = joinPath [fileroot, unpack $ boardName board, "thumb", unpack $ MyDatabase.fileName f]
+          let fname = joinPath [fileroot, unpack $ boardName board, "src", unpack $ Database.fileName f]
+          let thumb = joinPath [fileroot, unpack $ boardName board, "thumb", unpack $ Database.fileName f]
 
           liftIO $ removeFile fname `catchIOError` (\_ -> return ())
           liftIO $ removeFile thumb `catchIOError` (\_ -> return ())

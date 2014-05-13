@@ -1,30 +1,30 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Handler where
+module Web.Seacat.RequestHandler where
 
 import Blaze.ByteString.Builder (Builder)
 import Blaze.ByteString.Builder.ByteString (fromByteString)
-import Configuration (conf')
 import Control.Monad.IO.Class (liftIO)
 import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import Network.HTTP.Types.Status
 import Network.Wai (responseBuilder, responseFile, responseLBS)
-import Text.Blaze.Html.Renderer.Utf8 (renderHtmlBuilder)
-import Text.Hamlet (HtmlUrl)
 import System.Directory (doesFileExist)
 import System.FilePath.Posix (joinPath)
-import Types
+import Text.Blaze.Html.Renderer.Utf8 (renderHtmlBuilder)
+import Text.Hamlet (HtmlUrl)
 import Web.Routes.PathInfo (PathInfo)
+import Web.Seacat.Configuration (conf')
+import Web.Seacat.Types
 
 -- |Produce a 200 OK response from the given HTML
 html200Response :: PathInfo r => HtmlUrl r -> Handler r
-html200Response html = htmlResponse ok200 html
+html200Response = htmlResponse ok200
 
 -- |Produce a 404 File Not Found response form the given HTML
 html404Response :: PathInfo r => HtmlUrl r -> Handler r
-html404Response html = htmlResponse notFound404 html
+html404Response = htmlResponse notFound404
 
 -- |Produce a response from the given HTML and response code
 -- Todo: Do the second parameter of mkurl properly (get params)

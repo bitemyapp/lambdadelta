@@ -2,13 +2,13 @@ module Handler.Error ( error400
                      , error404
                      , error500) where
 
-import Handler (htmlResponse)
 import Network.HTTP.Types.Status ( Status
                                  , badRequest400
                                  , notFound404
                                  , internalServerError500)
 import Routes (Sitemap)
-import Types
+import Web.Seacat.RequestHandler (htmlResponse)
+import Web.Seacat.Types
 
 import qualified Handler.Templates as T (error)
 

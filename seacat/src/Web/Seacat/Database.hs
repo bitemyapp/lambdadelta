@@ -1,6 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Database where
+module Web.Seacat.Database ( withDB
+                           , withPool
+                           , runPool
+                           , unentity) where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Control (MonadBaseControl)

@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts, GADTs, OverloadedStrings, QuasiQuotes, TemplateHaskell, TypeFamilies #-}
 
-module MyDatabase where
+module Database where
 
 import Database.Persist.TH
 import Data.Time

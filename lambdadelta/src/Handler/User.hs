@@ -2,21 +2,22 @@
 
 module Handler.User (index, board, thread, Handler.User.postThread, postReply) where
 
-import Configuration (conf')
+import Control.Applicative ((<$>))
 import Control.Monad.Trans.Error (runErrorT)
-import Handler
+import Data.Maybe (catMaybes, fromJust, isJust)
+import Data.Text (Text)
+import Database
+import Database.Persist
 import Handler.Error (error400, error404)
 import Handler.Post (newThread, newReply)
-import Data.Maybe (catMaybes, fromJust, isJust)
-import Database
-import MyDatabase
-import Database.Persist
-import Data.Text (Text)
 import Routes (Sitemap)
-import Types
+import Web.Seacat.Configuration (conf')
+import Web.Seacat.Database
+import Web.Seacat.RequestHandler
+import Web.Seacat.Types
 
 import qualified Handler.Templates as T
-import qualified MyDatabase as D
+import qualified Database as D
 import qualified Routes as R
 
 -- |Render the index page
@@ -127,19 +128,16 @@ getThread :: Int         -- ^ The number of recent posts to show
 getThread limit (Entity opid op) =
     do opFile <- fmap fromJust $ get . fromJust $ postFile op
 
-       replies <- fmap length $ selectList [PostThread ==. Just opid] []
+       replies <- length <$> selectList [PostThread ==. Just opid] []
 
-       imageReplies <- fmap length $ selectList [ PostThread ==. Just opid
+       imageReplies <- length <$> selectList [ PostThread ==. Just opid
                                                , PostFile   !=. Nothing
                                                ] []
 
-       posts <- if limit < 0
-               then fmap reverse $
-                    selectList [PostThread ==. Just opid] [Desc PostUpdated]
-               else fmap reverse $
-                    selectList [PostThread ==. Just opid]
-                               [ Desc PostUpdated
-                               , LimitTo limit]
+       posts <- reverse <$> selectList [PostThread ==. Just opid]
+                 (if limit < 0
+                  then [Desc PostUpdated]
+                  else [Desc PostUpdated, LimitTo limit])
 
        posts' <- mapM getPostImage posts
 

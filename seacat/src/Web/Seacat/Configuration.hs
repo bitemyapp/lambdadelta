@@ -1,16 +1,21 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Configuration (ConfigParser,
-                      loadConfigFile, defaults,
-                      get, get', conf, conf') where
+module Web.Seacat.Configuration ( ConfigParser
+                                , loadConfigFile
+                                , applyUserConfig
+                                , defaults
+                                , get
+                                , get'
+                                , conf
+                                , conf') where
 
 import Control.Applicative ((<$>))
 import Control.Monad.Error.Class (MonadError)
 import Data.ConfigFile
 import Data.Either.Utils (forceEither)
 import System.IO.Error (catchIOError)
-import Types (RequestProcessor, askConf)
 import Web.Routes.PathInfo (PathInfo)
+import Web.Seacat.Types (RequestProcessor, askConf)
 
 -- |Load a configuration file by name.
 -- All errors (syntax, file access, etc) are squashed together,
@@ -47,15 +52,14 @@ defaults = forceEither . readstring emptyCP $ unlines
   , "[database]"
   , "connection_string = lambdadelta.sqlite"
   , "pool_size         = 10"
-  , "[board]"
-  , "board_listing = [[\"b\"]]"
-  , "summary_size = 5"
-  , "threads_per_page = 10"
-  , "maximum_pages = 10"
-  , "thumbnail_width = 300"
-  , "thumbnail_height = 300"
-  , "bump_limit = 300"
   ]
+
+-- |Apply the supplied configuration to the standard configuration.
+applyUserConfig :: ConfigParser       -- ^ The standard configuration
+                -> Maybe ConfigParser -- ^ Optional application-specific configuration
+                -> ConfigParser
+applyUserConfig cfg (Just usercfg) = merge cfg usercfg
+applyUserConfig cfg _ = cfg
 
 -- |Get a value from the configuration unsafely
 get' :: Get_C a => ConfigParser -> SectionSpec -> OptionSpec -> a

@@ -1,4 +1,4 @@
-module Types where
+module Web.Seacat.Types where
 
 import Control.Monad.Trans.Reader (ReaderT, asks)
 import Data.ConfigFile (ConfigParser)
