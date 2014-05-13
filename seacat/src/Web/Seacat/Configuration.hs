@@ -58,7 +58,7 @@ defaults = forceEither . readstring emptyCP $ unlines
 applyUserConfig :: ConfigParser       -- ^ The standard configuration
                 -> Maybe ConfigParser -- ^ Optional application-specific configuration
                 -> ConfigParser
-applyUserConfig cfg (Just usercfg) = merge cfg usercfg
+applyUserConfig cfg (Just usercfg) = usercfg `merge` cfg
 applyUserConfig cfg _ = cfg
 
 -- |Get a value from the configuration unsafely
