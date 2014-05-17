@@ -52,6 +52,8 @@
   $forall (image, post) <- replies
     <div class="post reply" id="reply_#{postNumber post}">
       <p .meta>
+        <a id="#{postNumber post}">
+        <a id="q#{postNumber post}">
         $if (nonEmpty $ postSubject post)
           <span .subject>
             #{postSubject post}
@@ -63,8 +65,8 @@
             #{postName post}
         <span .when>
           #{formatTime defaultTimeLocale "%F (%a) %X" (postTime post)}
-        <a href="@{Thread (boardName board) (postNumber post)}##{postNumber post}">No.
-        <a href="@{Thread (boardName board) (postNumber post)}#q#{postNumber post}">#{postNumber post}
+        <a href="@{Thread (boardName board) (postNumber op)}##{postNumber post}">No.
+        <a href="@{Thread (boardName board) (postNumber op)}#q#{postNumber post}">#{postNumber post}
       $maybe image <- image
         <p class="fileinfo">
           File: 
