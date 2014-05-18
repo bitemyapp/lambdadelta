@@ -8,7 +8,7 @@ import Database
 import Database.Persist
 import Handler.Board (listing, numPages, getThread)
 import Handler.Error (error400, error404)
-import Handler.Post (newThread, newReply)
+import Handler.Post (Target(..), newThread, newReply)
 import Routes (Sitemap)
 import Web.Seacat.Configuration (conf')
 import Web.Seacat.RequestHandler
@@ -52,14 +52,18 @@ thread board thread = withBoard board $ \(Entity boardId board') ->
 -- Todo: Handle noko
 postThread :: Text -> Handler Sitemap
 postThread board = withBoard board $ \(Entity boardId _) ->
-  possiblyRedirect (newThread boardId) $ R.Board board 1
+  possiblyRedirect (newThread boardId) $ \(a,_,p) -> if a == Index
+                                                    then R.Board board 1
+                                                    else R.Thread board p
 
 -- | Handle a request to post a new reply
 -- Todo: see todos for postThread
 postReply :: Text -> Int -> Handler Sitemap
 postReply board thread = withBoard board $ \(Entity boardId _) ->
   withThread boardId thread $ \(Entity threadId _) ->
-    possiblyRedirect (newReply boardId threadId) $ R.Board board 1
+    possiblyRedirect (newReply boardId threadId) $ \(a,_,p) -> if a == Index
+                                                              then R.Board board 1
+                                                              else R.Post board thread p
 
 -------------------------
 
@@ -93,10 +97,10 @@ withThread boardId thread handler = do
 -- |Run a possibly failing handler, and redirect on success.
 -- Todo: Add some way of defining the redirect later (ie, noko)
 possiblyRedirect :: ErrorT String (RequestProcessor Sitemap) a -- ^ The possibly-failing handler
-                 -> Sitemap -- ^ The location to redirect to
+                 -> (a -> Sitemap) -- ^ The location to redirect to
                  -> Handler Sitemap
 possiblyRedirect failing target = do
   result <- runErrorT failing
   case result of
-    Right _  -> redirect target
-    Left err -> error400 err
+    Right res -> redirect $ target res
+    Left err  -> error400 err

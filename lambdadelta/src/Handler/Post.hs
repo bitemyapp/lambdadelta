@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts, OverloadedStrings #-}
 
-module Handler.Post ( newThread
+module Handler.Post ( Target(..)
+                    , newThread
                     , newReply) where
 
 -- Todo: Replace calls to isJust/fromJust with pattern matching
@@ -36,6 +37,9 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
 
+data Target = Index | Thread
+              deriving Eq
+
 data APost = APost { _name     :: Text
                    , _email    :: Text
                    , _subject  :: Text
@@ -44,15 +48,16 @@ data APost = APost { _name     :: Text
                    , _file     :: Maybe (FileInfo BL.ByteString)
                    , _spoiler  :: Bool
                    , _bump     :: Bool
+                   , _target   :: Target
                    }
 
 -- |Post a new thread, returning the file and post IDs on success.
 -- Todo: Take the board name, and produce a nice error when it doesn't
 -- exist.
 newThread :: BoardId -- ^ The board
-          -> ErrorT String (RequestProcessor Sitemap) (FileId, PostId)
+          -> ErrorT String (RequestProcessor Sitemap) (Target, FileId, Int)
 newThread board = do
-  (Just f, p) <- handlePostForm board Nothing
+  (t, Just f, p) <- handlePostForm board Nothing
 
   -- Purge any threads which fell off the back page
   threads_per_page <- lift $ conf' "board" "threads_per_page"
@@ -72,7 +77,7 @@ newThread board = do
       mapM_ deleteThread threads
     Nothing -> return ()
 
-  return (f, p)
+  return (t, f, p)
 
 -- |Post a new reply, returning the file (if it exists) and post IDs
 -- on success.
@@ -80,7 +85,7 @@ newThread board = do
 -- errors when they don't exist.
 newReply :: BoardId -- ^ The board
          -> PostId  -- ^ The OP
-         -> ErrorT String (RequestProcessor Sitemap) (Maybe FileId, PostId)
+         -> ErrorT String (RequestProcessor Sitemap) (Target, Maybe FileId, Int)
 newReply board = handlePostForm board . Just
 
 -------------------------
@@ -96,7 +101,7 @@ newReply board = handlePostForm board . Just
 -- to modify the response and post
 handlePostForm :: BoardId      -- ^ The board
                -> Maybe PostId -- ^ The OP
-               -> ErrorT String (RequestProcessor Sitemap) (Maybe FileId, PostId)
+               -> ErrorT String (RequestProcessor Sitemap) (Target, Maybe FileId, Int)
 handlePostForm boardId threadId = do
   request <- lift askReq
   conf    <- lift askConf
@@ -140,25 +145,25 @@ makePost params thefile = do
                                           else Just f
                _ -> Nothing
 
-  return $ APost name email subject (toHtml comment) password file spoiler True
+  return $ APost name email subject (toHtml comment) password file spoiler True Index
 
 -- |Commit a new post and possible file upload to the database
 commitPost :: BoardId      -- ^ The board
            -> Maybe PostId -- ^ The OP
            -> APost        -- ^ The post
-           -> RequestProcessor Sitemap (Maybe FileId, PostId)
+           -> RequestProcessor Sitemap (Target, Maybe FileId, Int)
 commitPost boardId threadId post = do
   board  <- fromJust <$> get boardId
   fileId <- case _file post of
              Just f -> Just <$> handleFileUpload board f (_spoiler post)
              _ -> return Nothing
-  postId <- handleNewPost boardId threadId post fileId
+  (postId, postNumber) <- handleNewPost boardId threadId post fileId
 
   -- bump the thread if there is a thread to bump
   when (_bump post)$ return () `maybe` bump $ threadId
 
   -- return the relevant information
-  return (fileId, postId)
+  return (_target post, fileId, postNumber)
 
 -------------------------
 
@@ -219,22 +224,24 @@ handleNewPost :: BoardId      -- ^ The board
               -> Maybe PostId -- ^ The OP (if a reply)
               -> APost        -- ^ The post
               -> Maybe FileId -- ^ The file ID
-              -> RequestProcessor Sitemap PostId
+              -> RequestProcessor Sitemap (PostId, Int)
 handleNewPost boardId threadId post fileId = do
   number  <- ((+1) . length) <$> selectList [PostBoard ==. boardId] []
   updated <- liftIO getCurrentTime
 
-  insert $ Post number
-                boardId
-                threadId
-                updated
-                updated
-                fileId
-                (_name post)
-                (_email post)
-                (_subject post)
-                (toStrict . renderHtml $ _comment post)
-                (_password post)
+  pId <- insert $ Post number
+                      boardId
+                      threadId
+                      updated
+                      updated
+                      fileId
+                      (_name post)
+                      (_email post)
+                      (_subject post)
+                      (toStrict . renderHtml $ _comment post)
+                      (_password post)
+
+  return (pId, number)
 
 -------------------------
 

@@ -11,6 +11,7 @@ import Web.Routes.PathInfo
 data Sitemap = Index              -- ^ site index: /
              | Board Text Int     -- ^ board index: /b/<page>
              | Thread Text Int    -- ^ thread display: /b/res/123
+             | Post Text Int Int  -- ^ individual post: /b/res/123#5
              | PostThread Text    -- ^ new thread: /post/b/
              | PostReply Text Int -- ^ new reply: /post/b/123
              | File Text Text     -- ^ files: /b/src/123.png
@@ -25,8 +26,8 @@ instance PathInfo Sitemap where
     toPathSegments Stylesheet = ["style.css"]
     toPathSegments Banner = ["banner.png"]
     toPathSegments (Board board 1) = [board]
-    toPathSegments (Board board page) = [board, pack $ show page]
     toPathSegments (Thread board thread) = [board, "res", pack $ show thread]
+    toPathSegments (Post board thread post) = [board, "res", pack $ show thread ++ "#" ++ show post]
     toPathSegments (PostThread board) = ["post", board]
     toPathSegments (PostReply board thread) = ["post", board, pack $ show thread]
     toPathSegments (File board file) = [board, "src", file]
