@@ -8,7 +8,7 @@ module Handler.Post ( newThread
 import Prelude hiding (concat, null)
 
 import Control.Applicative ((<$>))
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Error (ErrorT, throwError)
@@ -155,7 +155,7 @@ commitPost boardId threadId post = do
   postId <- handleNewPost boardId threadId post fileId
 
   -- bump the thread if there is a thread to bump
-  if _bump post then return () `maybe` bump $ threadId else return ()
+  when (_bump post)$ return () `maybe` bump $ threadId
 
   -- return the relevant information
   return (fileId, postId)
