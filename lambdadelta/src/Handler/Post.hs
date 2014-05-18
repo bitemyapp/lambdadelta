@@ -43,6 +43,7 @@ data APost = APost { _name     :: Text
                    , _password :: Text
                    , _file     :: Maybe (FileInfo BL.ByteString)
                    , _spoiler  :: Bool
+                   , _bump     :: Bool
                    }
 
 -- |Post a new thread, returning the file and post IDs on success.
@@ -137,7 +138,7 @@ makePost params thefile = do
                                           else Just f
                _ -> Nothing
 
-  return $ APost name email subject (toHtml comment) password file spoiler
+  return $ APost name email subject (toHtml comment) password file spoiler True
 
 -- |Commit a new post and possible file upload to the database
 commitPost :: BoardId      -- ^ The board
@@ -152,7 +153,7 @@ commitPost boardId threadId post = do
   postId <- handleNewPost boardId threadId post fileId
 
   -- bump the thread if there is a thread to bump
-  return () `maybe` bump $ threadId
+  if _bump post then return () `maybe` bump $ threadId else return ()
 
   -- return the relevant information
   return (fileId, postId)
