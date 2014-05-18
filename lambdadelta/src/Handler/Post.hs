@@ -252,7 +252,7 @@ handleNewPost boardId threadId post fileId = do
 preprocess :: ConfigParser -- ^ The configuration
            -> APost        -- ^The original post
            -> APost
-preprocess c = doSage c . doName c . doLinebreaks c
+preprocess c = doNoko c . doSage c . doName c . doLinebreaks c
 
 -- |Turn linebreaks into <br>s in the comment
 doLinebreaks :: a -> APost -> APost
@@ -268,6 +268,11 @@ doName _ post = if null . strip $ _name post
 -- |Don't bump the thread if "sage" is in the email field, and sage is allowed
 doSage :: ConfigParser -> APost -> APost
 doSage c post | get' c "board" "allow_sage" && inEmail post "sage" = post { _bump = False }
+              | otherwise = post
+
+-- |Go straight to the thread page if "noko" is in the email field, and noko is allowed
+doNoko :: ConfigParser -> APost -> APost
+doNoko c post | get' c "board" "allow_noko" && inEmail post "noko" = post { _target = Thread }
               | otherwise = post
 
 -------------------------
