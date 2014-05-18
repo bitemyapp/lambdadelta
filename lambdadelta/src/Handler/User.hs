@@ -48,8 +48,6 @@ thread board thread = withBoard board $ \(Entity boardId board') ->
 
 -- |Handle a request to post a new thread
 -- Todo: anti-spam
--- Todo: Only respond to POST
--- Todo: Handle noko
 postThread :: Text -> Handler Sitemap
 postThread board = withBoard board $ \(Entity boardId _) ->
   possiblyRedirect (newThread boardId) $ \(a,_,p) -> if a == Index
@@ -95,7 +93,6 @@ withThread boardId thread handler = do
 -------------------------
 
 -- |Run a possibly failing handler, and redirect on success.
--- Todo: Add some way of defining the redirect later (ie, noko)
 possiblyRedirect :: ErrorT String (RequestProcessor Sitemap) a -- ^ The possibly-failing handler
                  -> (a -> Sitemap) -- ^ The location to redirect to
                  -> Handler Sitemap

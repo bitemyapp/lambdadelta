@@ -4,8 +4,6 @@ module Handler.Post ( Target(..)
                     , newThread
                     , newReply) where
 
--- Todo: Replace calls to isJust/fromJust with pattern matching
-
 import Prelude hiding (concat, null)
 
 import Control.Applicative ((<$>))
@@ -97,8 +95,6 @@ newReply board = handlePostForm board . Just
 -- Todo: Store temporary files on disk, not in memory
 -- Todo: tripcodes - come up with a good way for the name field to
 -- modify the post
--- Todo: sage/noko/dice - come up with a good way for the email field
--- to modify the response and post
 handlePostForm :: BoardId      -- ^ The board
                -> Maybe PostId -- ^ The OP
                -> ErrorT String (RequestProcessor Sitemap) (Target, Maybe FileId, Int)
@@ -248,7 +244,6 @@ handleNewPost boardId threadId post fileId = do
 -- |Transform a post according to arbitrary functions. These functions
 -- should NOT call any HTML escaping functions on the comment, as
 -- otherwise we'll end up with really escaped HTML, and interference.
--- Todo: sage, noko, dice
 preprocess :: ConfigParser -- ^ The configuration
            -> APost        -- ^The original post
            -> APost
