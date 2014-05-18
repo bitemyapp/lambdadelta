@@ -16,7 +16,7 @@ import Data.ByteString (concat)
 import Data.Char (chr)
 import Data.Hash.MD5 (Str(..), md5s)
 import Data.Maybe (isJust, fromJust, fromMaybe)
-import Data.Text (Text, null, pack, strip, unpack)
+import Data.Text (Text, null, pack, splitOn, strip, unpack)
 import Data.Text.Encoding (decodeUtf8)
 import Data.Text.Lazy (toStrict)
 import Data.Time.Clock (getCurrentTime)
@@ -245,7 +245,7 @@ handleNewPost boardId threadId post fileId = do
 preprocess :: ConfigParser -- ^ The configuration
            -> APost        -- ^The original post
            -> APost
-preprocess c = doName c . doLinebreaks c
+preprocess c = doSage c . doName c . doLinebreaks c
 
 -- |Turn linebreaks into <br>s in the comment
 doLinebreaks :: a -> APost -> APost
@@ -258,6 +258,11 @@ doName _ post = if null . strip $ _name post
                 then post { _name = "Anonymous" }
                 else post
 
+-- |Don't bump the thread if "sage" is in the email field, and sage is allowed
+doSage :: ConfigParser -> APost -> APost
+doSage c post | get' c "board" "allow_sage" && inEmail post "sage" = post { _bump = False }
+              | otherwise = post
+
 -------------------------
 
 -- |Check if a post has a comment
@@ -267,6 +272,10 @@ hasComment = not . null . strip . toStrict . renderHtml . _comment
 -- |Check if a post has a file
 hasFile :: APost -> Bool
 hasFile = isJust . _file
+
+-- |Check if a word is in the email
+inEmail :: APost -> Text -> Bool
+inEmail post search = search `elem` splitOn " " (_email post)
 
 -------------------------
 

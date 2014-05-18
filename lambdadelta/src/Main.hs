@@ -63,4 +63,5 @@ defaults = forceEither . readstring emptyCP $ unlines
   , "thumbnail_height = 300"
   , "bump_limit = 300"
   , "banner_dir = banners"
+  , "allow_sage = true"
   ]
