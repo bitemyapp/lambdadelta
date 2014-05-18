@@ -29,8 +29,8 @@ import Routes (Sitemap)
 import System.FilePath.Posix (joinPath, takeExtension)
 import Text.Blaze.Html (Html, toHtml, preEscapedToHtml)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
-import Web.Seacat.Configuration (conf')
-import Web.Seacat.RequestHandler.Types (RequestProcessor, askReq)
+import Web.Seacat.Configuration (ConfigParser, conf', get')
+import Web.Seacat.RequestHandler.Types (RequestProcessor, askConf, askReq)
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
@@ -99,9 +99,11 @@ handlePostForm :: BoardId      -- ^ The board
                -> ErrorT String (RequestProcessor Sitemap) (Maybe FileId, PostId)
 handlePostForm boardId threadId = do
   request <- lift askReq
+  conf    <- lift askConf
+
   (params, files) <- liftIO $ parseRequestBody lbsBackEnd request
 
-  post <- lift . fmap preprocess . makePost params $ lookup "file" files
+  post <- lift . fmap (preprocess conf) . makePost params $ lookup "file" files
 
   -- If this is a new thread, there must be both an image and a comment.
   -- If this is a reply, there must be at least one of an image or a comment.
@@ -240,20 +242,21 @@ handleNewPost boardId threadId post fileId = do
 -- should NOT call any HTML escaping functions on the comment, as
 -- otherwise we'll end up with really escaped HTML, and interference.
 -- Todo: sage, noko, dice
-preprocess :: APost -- ^The original post
+preprocess :: ConfigParser -- ^ The configuration
+           -> APost        -- ^The original post
            -> APost
-preprocess = doName . doLinebreaks
+preprocess c = doName c . doLinebreaks c
 
 -- |Turn linebreaks into <br>s in the comment
-doLinebreaks :: APost -> APost
-doLinebreaks post = post { _comment = preEscapedToHtml . T.replace "\n" "<br>" . toText $ _comment post }
+doLinebreaks :: a -> APost -> APost
+doLinebreaks _ post = post { _comment = preEscapedToHtml . T.replace "\n" "<br>" . toText $ _comment post }
     where toText = toStrict . renderHtml
 
 -- |Turn an empty name into "Anonymous"
-doName :: APost -> APost
-doName post = if null . strip $ _name post
-              then post { _name = "Anonymous" }
-              else post
+doName :: a -> APost -> APost
+doName _ post = if null . strip $ _name post
+                then post { _name = "Anonymous" }
+                else post
 
 -------------------------
 
