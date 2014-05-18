@@ -35,7 +35,15 @@ import Web.Seacat.RequestHandler.Types (RequestProcessor, askReq)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
-import qualified Network.Wai.Parse as W
+
+data APost = APost { _name     :: Text
+                   , _email    :: Text
+                   , _subject  :: Text
+                   , _comment  :: Html
+                   , _password :: Text
+                   , _file     :: Maybe (FileInfo BL.ByteString)
+                   , _spoiler  :: Bool
+                   }
 
 -- |Post a new thread, returning the file and post IDs on success.
 -- Todo: Take the board name, and produce a nice error when it doesn't
@@ -92,46 +100,56 @@ handlePostForm boardId threadId = do
   request <- lift askReq
   (params, files) <- liftIO $ parseRequestBody lbsBackEnd request
 
-  let comment = decodeUtf8 <$> lookup "comment"  params
-  let file    = lookup "file" files
+  post <- lift . fmap preprocess . makePost params $ lookup "file" files
 
   -- If this is a new thread, there must be both an image and a comment.
   -- If this is a reply, there must be at least one of an image or a comment.
   let isValidPost = case threadId of
-                      Just _  -> hasValue comment || hasContent file
-                      Nothing -> hasValue comment && hasContent file
+                      Just _  -> hasComment post || hasFile post
+                      Nothing -> hasComment post && hasFile post
   
   -- Return an error if the post isn't good
   unless isValidPost $ case threadId of
                          Just _  -> replyError
-                         Nothing -> threadError comment file
+                         Nothing -> threadError post
 
   -- All looks good, construct a post, save the file, and bump the thread.
-  lift $ commitPost boardId threadId params files
+  lift $ commitPost boardId threadId post
+
+-- |Extract a post from the POST!
+makePost :: [Param]                        -- ^ The parameters
+         -> Maybe (FileInfo BL.ByteString) -- ^ The possible file
+                                          -- (careful: being a Just here
+                                          -- doesn't make it necessarily
+                                          -- valid)
+         -> RequestProcessor Sitemap APost
+makePost params thefile = do
+  let name     = fromMaybe "" $ decodeUtf8 <$> lookup "name"     params
+  let email    = fromMaybe "" $ decodeUtf8 <$> lookup "email"    params
+  let subject  = fromMaybe "" $ decodeUtf8 <$> lookup "subject"  params
+  let comment  = fromMaybe "" $ decodeUtf8 <$> lookup "comment"  params
+  let password = fromMaybe "" $ decodeUtf8 <$> lookup "password" params
+  let spoiler  = isJust $ lookup "spoiler" params
+
+  let file = case thefile of
+               Just f@(FileInfo _ _ c) -> if BL.null c
+                                          then Nothing
+                                          else Just f
+               _ -> Nothing
+
+  return $ APost name email subject (toHtml comment) password file spoiler
 
 -- |Commit a new post and possible file upload to the database
-commitPost :: BoardId                -- ^ The board
-           -> Maybe PostId           -- ^ The OP
-           -> [Param]                -- ^ The parameters
-           -> [W.File BL.ByteString] -- ^ The files
+commitPost :: BoardId      -- ^ The board
+           -> Maybe PostId -- ^ The OP
+           -> APost        -- ^ The post
            -> RequestProcessor Sitemap (Maybe FileId, PostId)
-commitPost boardId threadId params files = do
-  let name     = decodeUtf8 <$> lookup "name"     params
-  let email    = decodeUtf8 <$> lookup "email"    params
-  let subject  = decodeUtf8 <$> lookup "subject"  params
-  let comment  = decodeUtf8 <$> lookup "comment"  params
-  let password = decodeUtf8 <$> lookup "password" params
-
-  let file    = lookup "file" files
-  let spoiler = isJust $ lookup "spoiler" params
-
-  let comment' = processComment $ "" `fromMaybe` comment
-
+commitPost boardId threadId post = do
   board  <- fromJust <$> get boardId
-  fileId <- if hasContent file
-           then Just <$> handleFileUpload board (fromJust file) spoiler
-           else return Nothing
-  postId <- handleNewPost boardId threadId name email subject comment' fileId password
+  fileId <- case _file post of
+             Just f -> Just <$> handleFileUpload board f (_spoiler post)
+             _ -> return Nothing
+  postId <- handleNewPost boardId threadId post fileId
 
   -- bump the thread if there is a thread to bump
   return () `maybe` bump $ threadId
@@ -196,44 +214,55 @@ handleFileUpload board (FileInfo fname _ content) spoiler = do
 -- |Construct and insert a new post into the database
 handleNewPost :: BoardId      -- ^ The board
               -> Maybe PostId -- ^ The OP (if a reply)
-              -> Maybe Text   -- ^ The name
-              -> Maybe Text   -- ^ The email
-              -> Maybe Text   -- ^ The subject
-              -> Html         -- ^ The comment
+              -> APost        -- ^ The post
               -> Maybe FileId -- ^ The file ID
-              -> Maybe Text   -- ^ The password
               -> RequestProcessor Sitemap PostId
-handleNewPost boardId threadId name email subject comment fileId password = do
+handleNewPost boardId threadId post fileId = do
   number  <- ((+1) . length) <$> selectList [PostBoard ==. boardId] []
   updated <- liftIO getCurrentTime
 
-  let name'     = if hasValue name then fromJust name else "Anonymous"
-  let email'    = fromMaybe "" email
-  let subject'  = fromMaybe "" subject
-  let password' = fromMaybe "" password
-
-  insert $ Post number boardId threadId updated updated fileId name' email' subject' (toStrict $ renderHtml comment) password'
-
--------------------------
-
--- |Perform any processing on a comment before saving it: newlines,
--- word replacement, etc.
-processComment :: Text -- ^ The original comment
-               -> Html
-processComment comment = preEscapedToHtml $ T.replace "\n" "<br>" $ escape comment
-  where escape = toStrict . renderHtml . toHtml
+  insert $ Post number
+                boardId
+                threadId
+                updated
+                updated
+                fileId
+                (_name post)
+                (_email post)
+                (_subject post)
+                (toStrict . renderHtml $ _comment post)
+                (_password post)
 
 -------------------------
 
--- |Check if a value is set and is nonempty
-hasValue :: Maybe Text -> Bool
-hasValue Nothing = False
-hasValue (Just t) = not $ null (strip t)
+-- |Transform a post according to arbitrary functions. These functions
+-- should NOT call any HTML escaping functions on the comment, as
+-- otherwise we'll end up with really escaped HTML, and interference.
+-- Todo: sage, noko, dice
+preprocess :: APost -- ^The original post
+           -> APost
+preprocess = doName . doLinebreaks
 
--- |Check if a file is nonempty
-hasContent :: Maybe (FileInfo BL.ByteString) -> Bool
-hasContent Nothing = False
-hasContent (Just (FileInfo _ _ c)) = not $ BL.null c
+-- |Turn linebreaks into <br>s in the comment
+doLinebreaks :: APost -> APost
+doLinebreaks post = post { _comment = preEscapedToHtml . T.replace "\n" "<br>" . toText $ _comment post }
+    where toText = toStrict . renderHtml
+
+-- |Turn an empty name into "Anonymous"
+doName :: APost -> APost
+doName post = if null . strip $ _name post
+              then post { _name = "Anonymous" }
+              else post
+
+-------------------------
+
+-- |Check if a post has a comment
+hasComment :: APost -> Bool
+hasComment = not . null . strip . toStrict . renderHtml . _comment
+
+-- |Check if a post has a file
+hasFile :: APost -> Bool
+hasFile = isJust . _file
 
 -------------------------
 
@@ -243,10 +272,9 @@ replyError = throwError "Replies must have at least a file or a comment"
 
 -- |Get the error message for a thread
 threadError :: Monad m
-            => Maybe Text -- ^ The comment
-            -> Maybe (FileInfo BL.ByteString) -- ^ The file
+            => APost -- ^ The post
             -> ErrorT String m a
-threadError com fil = throwError $ threadError' (hasValue com) (hasContent fil)
-  where threadError' False False = "Topics must have both a file and a comment."
-        threadError' True False  = "Topics must have a file."
-        threadError' False True  = "Topics must have a comment"
+threadError post = throwError threadError'
+  where threadError' | not (hasComment post) && not (hasFile post) = "Topics must have both a file and a comment."
+                     | not (hasComment post) = "Topics must have a comment"
+                     | not (hasFile post) = "Topics must have a file."
