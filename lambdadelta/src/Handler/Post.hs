@@ -267,7 +267,7 @@ doSage c post | get' c "board" "allow_sage" && inEmail post "sage" = post { _bum
 
 -- |Go straight to the thread page if "noko" is in the email field, and noko is allowed
 doNoko :: ConfigParser -> APost -> APost
-doNoko c post | get' c "board" "allow_noko" && inEmail post "noko" = post { _target = Thread }
+doNoko c post | get' c "board" "always_noko" || (get' c "board" "allow_noko" && inEmail post "noko") = post { _target = Thread }
               | otherwise = post
 
 -------------------------

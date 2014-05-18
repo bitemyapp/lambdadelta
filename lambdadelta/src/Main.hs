@@ -65,4 +65,5 @@ defaults = forceEither . readstring emptyCP $ unlines
   , "banner_dir = banners"
   , "allow_sage = true"
   , "allow_noko = true"
+  , "always_noko = false"
   ]
