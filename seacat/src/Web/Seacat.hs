@@ -1,8 +1,11 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Web.Seacat (seacat, seacat') where
 
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (runReaderT)
 import Data.Either.Utils (forceEither)
+import Data.Text (replace)
 import Data.String (fromString)
 import Database.Persist.Sql (ConnectionPool, Migration, SqlPersistM, runMigration)
 import Network.HTTP.Types.Method (StdMethod(..), parseMethod)
@@ -150,5 +153,6 @@ process :: PathInfo r
 process route on500 conf pool mkurl path req = requestHandler `catchIOError` runError
   where requestHandler = runHandler $ route method path
         runError err   = runHandler $ on500 (show err)
-        runHandler h   = runPool (runReaderT h (conf, mkurl, req)) pool
+        runHandler h   = runPool (runReaderT h (conf, mkurl', req)) pool
         method         = forceEither . parseMethod . requestMethod $ req
+        mkurl' r args  = replace "%23" "#" $ mkurl r args
