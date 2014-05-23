@@ -5,7 +5,8 @@ module Web.Seacat.RequestHandler.BanHammer ( ipBan
 
 import Control.Applicative ((<$>))
 import Control.Monad.IO.Class (liftIO)
-import Data.Time.Clock (NominalDiffTime, addUTCTime, getCurrentTime)
+import Data.Text (Text)
+import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
 import Database.Persist
 import Network.Wai (remoteHost)
 import Web.Routes.PathInfo (PathInfo)
@@ -51,8 +52,9 @@ rateLimit tag freq onLimit handler = do
 
 -- |Check if someone is banned, and send them to the error handler if
 -- not. This uses the same route distinguishing method as rate limited
--- routes. This does not do range banning yet.
-ipBan :: PathInfo r => Maybe String -> Handler r -> Handler r -> Handler r
+-- routes. This does not do range banning yet. The error handler takes
+-- as a parameter the expiration time and reason.
+ipBan :: PathInfo r => Maybe String -> (UTCTime -> Text -> Handler r) -> Handler r -> Handler r
 ipBan tag onBan handler = do
   ip <- (show . remoteHost) <$> askReq
 
@@ -68,5 +70,5 @@ ipBan tag onBan handler = do
                      ]) []
 
   case ban of
-    Just _  -> onBan
+    Just (Entity _ ipban)  -> onBan (iPBanExpires ipban) (iPBanReason ipban)
     Nothing -> handler
