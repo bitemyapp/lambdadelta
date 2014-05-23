@@ -46,14 +46,8 @@ route _ _                  = error405 "Method not allowed"
 -- |Default configuration values
 defaults :: ConfigParser
 defaults = forceEither . readstring emptyCP $ unlines
-  [ "[server]"
-  , "host      = *"
-  , "port      = 3000"
-  , "web_root  = http://localhost:3000"
-  , "file_root = /tmp"
-  , "[database]"
+  [ "[database]"
   , "connection_string = lambdadelta.sqlite"
-  , "pool_size         = 10"
   , "[board]"
   , "board_listing = [[\"b\"]]"
   , "summary_size = 5"
