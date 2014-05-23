@@ -65,6 +65,33 @@ rateLimit tag freq onLimit handler = do
 
   now <- liftIO $ getCurrentTime
 
+  deleteWhere [RateLimitExpires <. now]
+
+  ban <- selectFirst ([ RateLimitApplies ==. tag
+                     , RateLimitTarget  ==. ip
+                     ] ||.
+                     [ RateLimitApplies ==. Nothing
+                     , RateLimitTarget  ==. ip
+                     ]) []
+
+  case ban of
+    Just _  -> onLimit
+    Nothing -> do
+      let banUntil = addUTCTime freq now
+      insert $ RateLimit tag banUntil ip
+      handler
+
+--------------------
+
+-- |Check if someone is banned, and send them to the error handler if
+-- not. This uses the same route distinguishing method as rate limited
+-- routes. This does not do range banning yet.
+ipBan :: PathInfo r => Maybe String -> Handler r -> Handler r -> Handler r
+ipBan tag onBan handler = do
+  ip <- (show . remoteHost) <$> askReq
+
+  now <- liftIO $ getCurrentTime
+
   deleteWhere [IPBanExpires <. now]
 
   ban <- selectFirst ([ IPBanApplies ==. tag
@@ -75,8 +102,5 @@ rateLimit tag freq onLimit handler = do
                      ]) []
 
   case ban of
-    Just _  -> onLimit
-    Nothing -> do
-      let banUntil = addUTCTime freq now
-      insert $ IPBan tag banUntil "Automatic rate limiting ban" ip
-      handler
+    Just _  -> onBan
+    Nothing -> handler
