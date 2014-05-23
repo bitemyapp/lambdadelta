@@ -50,6 +50,7 @@ defaults = forceEither . readstring emptyCP $ unlines
   , "web_root  = http://localhost:3000"
   , "file_root = /tmp"
   , "[database]"
+  , "backend           = sqlite"
   , "connection_string = lambdadelta.sqlite"
   , "pool_size         = 10"
   ]

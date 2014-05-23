@@ -96,13 +96,14 @@ runserver route on500 _ _ conf = do
   let host = get' conf "server" "host"
   let port = get' conf "server" "port"
 
-  let connstr  = get' conf "database" "connection_string"
+  let backend  = get' conf "database" "backend"
+  let connstr  = get' conf "database" "connection_string" 
   let poolsize = get' conf "database" "pool_size"
 
   let settings = setHost (fromString host) . setPort port $ defaultSettings
 
   putStrLn $ "Starting Seacat on " ++ host ++ ":" ++ show port
-  withPool (fromString connstr) poolsize $
+  withPool (fromString backend) (fromString connstr) poolsize $
     runSettings settings . runner route on500 conf
 
 -- |Migrate the database
@@ -110,18 +111,20 @@ migrate :: a -> b
         -> Migration SqlPersistM -- ^ Database migration handler
         -> c -> CommandRunner
 migrate _ _ migration _ conf = do
+  let backend  = get' conf "database" "backend"
   let connstr  = get' conf "database" "connection_string"
   let poolsize = get' conf "database" "pool_size"
-  withDB (fromString connstr) poolsize $ runMigration migration
+  withDB (fromString backend) (fromString connstr) poolsize $ runMigration migration
 
 -- |Populate the database with test data
 populate :: a -> b -> c
          -> SqlPersistM () -- ^ Database populator
          -> CommandRunner
 populate _ _ _ pop conf = do
+  let backend  = get' conf "database" "backend"
   let connstr  = get' conf "database" "connection_string"
   let poolsize = get' conf "database" "pool_size"
-  withDB (fromString connstr) poolsize pop
+  withDB (fromString backend) (fromString connstr) poolsize pop
 
 -- |Fail with an error
 badcommand :: a -> b -> c -> d -> CommandRunner
