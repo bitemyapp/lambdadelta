@@ -19,6 +19,7 @@ import Web.Routes.Wai (handleWai)
 
 import Web.Seacat.Configuration (ConfigParser, applyUserConfig, loadConfigFile, defaults, get')
 import Web.Seacat.Database (runPool, withPool, withDB)
+import Web.Seacat.Database.Internal (migrateAll)
 import Web.Seacat.RequestHandler.Types (Handler, MkUrl)
 
 -- |Wrapper for seacat'' in the case where there is no config.
@@ -114,6 +115,7 @@ migrate _ _ migration _ conf = do
   let backend  = get' conf "database" "backend"
   let connstr  = get' conf "database" "connection_string"
   let poolsize = get' conf "database" "pool_size"
+  withDB (fromString backend) (fromString connstr) poolsize $ runMigration migrateAll
   withDB (fromString backend) (fromString connstr) poolsize $ runMigration migration
 
 -- |Populate the database with test data
