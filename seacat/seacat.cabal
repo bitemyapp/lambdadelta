@@ -55,7 +55,8 @@ library
                      , Web.Seacat.Configuration
                      , Web.Seacat.Database
                      , Web.Seacat.RequestHandler
-                     , Web.Seacat.RequestHandler.Middleware
+                     , Web.Seacat.RequestHandler.BanHammer
+                     , Web.Seacat.RequestHandler.OnMethod
                      , Web.Seacat.RequestHandler.Types
   
   -- Modules included in this library but not exported.

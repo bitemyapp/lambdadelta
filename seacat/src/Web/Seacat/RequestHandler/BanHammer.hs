@@ -1,50 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Web.Seacat.RequestHandler.Middleware ( on
-                                            , onGet
-                                            , onPost
-                                            , rateLimit) where
+module Web.Seacat.RequestHandler.BanHammer ( ipBan
+                                           , rateLimit) where
 
 import Control.Applicative ((<$>))
 import Control.Monad.IO.Class (liftIO)
-import Data.Either.Utils (forceEither)
 import Data.Time.Clock (NominalDiffTime, addUTCTime, getCurrentTime)
 import Database.Persist
-import Network.HTTP.Types.Method (StdMethod(..), parseMethod)
-import Network.Wai (requestMethod, remoteHost)
+import Network.Wai (remoteHost)
 import Web.Routes.PathInfo (PathInfo)
 import Web.Seacat.Database.Internal
 import Web.Seacat.RequestHandler.Types (Handler, askReq)
-
--- |Run the provided handler on a GET request
-onGet :: PathInfo r
-      => Handler r -- ^ The 405 handler
-      -> Handler r -- ^ The handler
-      -> Handler r
-onGet = on GET
-
--- |Run the provided handler on a Post request
-onPost :: PathInfo r
-       => Handler r -- ^ The 405 handler
-       -> Handler r -- ^ The handler
-       -> Handler r
-onPost = on POST
-
--- |Run the provided handler if the HTTP method matches, running the
--- 405 error handler if not.
-on :: PathInfo r
-   => StdMethod -- ^ The method to run on
-   -> Handler r -- ^ The 405 handler
-   -> Handler r -- ^ The handler
-   -> Handler r
-on method on405 handler = do
-  req <- askReq
-  let rmethod = forceEither . parseMethod . requestMethod $ req
-  if rmethod == method
-  then handler
-  else on405
-
---------------------
 
 -- |Rate limit a particular route. This only looks at individual IPs,
 -- and not ranges.
