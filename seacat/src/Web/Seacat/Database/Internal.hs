@@ -18,6 +18,17 @@ IPBan
     target  String
     deriving Show
 
+IPRangeBan
+    applies String Maybe
+    expires UTCTime
+    reason  Text
+
+    -- These are IP addresses converted to numbers for comparison.
+    -- Todo: Use a proper IP range type (requires writing fielddefs)
+    start Rational
+    stop  Rational
+    deriving Show
+
 RateLimit
     applies String Maybe
     expires UTCTime

@@ -5,9 +5,12 @@ module Web.Seacat.RequestHandler.BanHammer ( ipBan
 
 import Control.Applicative ((<$>))
 import Control.Monad.IO.Class (liftIO)
+import Data.Bits ((.|.), shift)
 import Data.Text (Text)
 import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
+import Data.Word ()
 import Database.Persist
+import Network.Socket (SockAddr(..))
 import Network.Wai (remoteHost)
 import Web.Routes.PathInfo (PathInfo)
 import Web.Seacat.Database.Internal
@@ -52,23 +55,43 @@ rateLimit tag freq onLimit handler = do
 
 -- |Check if someone is banned, and send them to the error handler if
 -- not. This uses the same route distinguishing method as rate limited
--- routes. This does not do range banning yet. The error handler takes
--- as a parameter the expiration time and reason.
+-- routes. The error handler takes as a parameter the expiration time
+-- and reason.
 ipBan :: PathInfo r => Maybe String -> (UTCTime -> Text -> Handler r) -> Handler r -> Handler r
 ipBan tag onBan handler = do
-  ip <- (show . remoteHost) <$> askReq
+  ip <- remoteHost <$> askReq
 
   now <- liftIO $ getCurrentTime
 
   deleteWhere [IPBanExpires <. now]
+  deleteWhere [IPRangeBanExpires <. now]
 
   ban <- selectFirst ([ IPBanApplies ==. tag
-                     , IPBanTarget  ==. ip
+                     , IPBanTarget  ==. show ip
                      ] ||.
                      [ IPBanApplies ==. Nothing
-                     , IPBanTarget  ==. ip
+                     , IPBanTarget  ==. show ip
                      ]) []
 
+  let intIp = case ip of
+                SockAddrInet _ hostaddr -> fromIntegral hostaddr
+                SockAddrInet6 _ _ (a, b, c, d) _ -> let a'  = shift (fromIntegral a :: Integer) 96
+                                                        b' = shift (fromIntegral b :: Integer) 64
+                                                        c' = shift (fromIntegral c :: Integer) 32
+                                                        d' = fromIntegral d
+                                                    in fromIntegral $ a' .|. b' .|. c' .|. d'
+                SockAddrUnix _ -> -1
+
+  rangeBan <- selectFirst ([ IPRangeBanApplies ==. tag
+                          , IPRangeBanStart <=. intIp
+                          , IPRangeBanStop >=. intIp
+                          ] ||.
+                          [ IPRangeBanApplies ==. Nothing
+                          , IPRangeBanStart <=. intIp
+                          , IPRangeBanStop >=. intIp
+                          ]) []
   case ban of
-    Just (Entity _ ipban)  -> onBan (iPBanExpires ipban) (iPBanReason ipban)
-    Nothing -> handler
+    Just (Entity _ ipban) -> onBan (iPBanExpires ipban) (iPBanReason ipban)
+    Nothing -> case rangeBan of
+                Just (Entity _ rangeban) -> onBan (iPRangeBanExpires rangeban) (iPRangeBanReason rangeban)
+                Nothing -> handler
