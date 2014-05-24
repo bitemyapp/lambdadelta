@@ -2,7 +2,7 @@ Seacat, a web framework written in Haskell
 ==========================================
 
 Seacat is a little web framework written in Haskell, which evolved
-rather naturally from me writing Λδ (defailed below). I think the
+rather naturally from me writing Λδ (detailed below). I think the
 naturality of producing a little framework, rather than developing in
 an ad hoc manner, is a testament to why Haskell is good for web
 development: you actually sit and think about what you're doing.
@@ -50,6 +50,10 @@ commands are as follows,
             database).
  - populate: Populate the database with sample data.
  - runserver: Run the Seacat server.
+
+Note: Seacat itself uses a database for IP banning and rate limiting,
+so if you use those features you need to run a migrate, even if you
+don't use a database in your application.
 
 Configuration
 -------------
