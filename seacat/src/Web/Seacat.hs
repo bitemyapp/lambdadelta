@@ -139,17 +139,17 @@ migrate :: PathInfo r
         -> Maybe FilePath
         -> SeacatSettings
         -> IO ()
-migrate _ _ _ settings =
-    case _migrate settings of
-      Just migration -> do
-        let conf = fromJust $ _config settings
-        let backend  = get' conf "database" "backend"
-        let connstr  = get' conf "database" "connection_string"
-        let poolsize = get' conf "database" "pool_size"
-        withDB (fromString backend) (fromString connstr) poolsize $ runMigration migrateAll
-        withDB (fromString backend) (fromString connstr) poolsize $ runMigration migration
+migrate _ _ _ settings = do
+  let conf = fromJust $ _config settings
+  let backend  = get' conf "database" "backend"
+  let connstr  = get' conf "database" "connection_string"
+  let poolsize = get' conf "database" "pool_size"
+  withDB (fromString backend) (fromString connstr) poolsize $ runMigration migrateAll
 
-      Nothing -> die "No migration handler."
+  case _migrate settings of
+    Just migration -> do
+      withDB (fromString backend) (fromString connstr) poolsize $ runMigration migration
+    Nothing -> putStrLn "No application migration handler."
 
 -- |Populate the database with test data
 populate :: PathInfo r
