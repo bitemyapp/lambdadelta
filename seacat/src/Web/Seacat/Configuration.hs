@@ -2,6 +2,7 @@
 
 module Web.Seacat.Configuration ( ConfigParser
                                 , loadConfigFile
+                                , reloadConfigFile
                                 , applyUserConfig
                                 , defaults
                                 , get
@@ -40,6 +41,13 @@ loadConfigFileUnsafe filename = do
   let base = emptyCP { accessfunc = interpolatingAccess 10 }
   cp <- readfile base filename
   return . merge defaults $ forceEither cp
+
+-- |Reload and reapply the configuration file. If an error is raised,
+-- fall back to the original configuration.
+reloadConfigFile :: ConfigParser    -- ^ The original configuration
+                 -> FilePath        -- ^ The config file to load
+                 -> IO ConfigParser -- ^ The new configuration
+reloadConfigFile cfg filename = (fmap (flip merge cfg) $ loadConfigFileUnsafe filename) `catchIOError` const (return cfg)
 
 -- |Default configuration values
 defaults :: ConfigParser

@@ -17,7 +17,7 @@ import System.IO.Error (catchIOError)
 import Web.Routes.PathInfo (PathInfo)
 import Web.Routes.Wai (handleWai)
 
-import Web.Seacat.Configuration (ConfigParser, applyUserConfig, loadConfigFile, defaults, get')
+import Web.Seacat.Configuration (ConfigParser, applyUserConfig, loadConfigFile, reloadConfigFile, defaults, get')
 import Web.Seacat.Database (runPool, withPool, withDB)
 import Web.Seacat.Database.Internal (migrateAll)
 import Web.Seacat.RequestHandler.Types (Handler, MkUrl)
@@ -57,12 +57,16 @@ seacat'' cfg route on500 migration pop = do
 
   let command = head args
 
-  config <- case args of
-             (_:conffile:_) -> loadConfigFile conffile
-             _ -> return $ Just defaults
+  let confFile = case args of
+                   (_:conffile:_) -> Just conffile
+                   _ -> Nothing
+
+  config <- case confFile of
+             Just cfile -> loadConfigFile cfile
+             Nothing -> return $ Just defaults
 
   case config of
-    Just conf -> run command route on500 migration pop (applyUserConfig conf cfg)
+    Just conf -> run command route on500 migration pop ((applyUserConfig conf cfg), confFile)
     Nothing   -> die "Failed to read configuration"
 
 -- |Die with a fatal error
@@ -73,7 +77,7 @@ die err = putStrLn err >> exitFailure
 -------------------------
 
 -- |Function which runs an IO command (eg, runserver)
-type CommandRunner = ConfigParser -> IO ()
+type CommandRunner = (ConfigParser, Maybe FilePath) -> IO ()
 
 -- |Run one of the applications, depending on the command
 run :: PathInfo r
@@ -93,7 +97,7 @@ runserver :: PathInfo r
           => (StdMethod -> r -> Handler r) -- ^ Routing function
           -> (String -> Handler r)        -- ^ Top-level error handling function
           -> a -> b -> CommandRunner
-runserver route on500 _ _ conf = do
+runserver route on500 _ _ c@(conf,_) = do
   let host = get' conf "server" "host"
   let port = get' conf "server" "port"
 
@@ -105,13 +109,13 @@ runserver route on500 _ _ conf = do
 
   putStrLn $ "Starting Seacat on " ++ host ++ ":" ++ show port
   withPool (fromString backend) (fromString connstr) poolsize $
-    runSettings settings . runner route on500 conf
+    runSettings settings . runner route on500 c
 
 -- |Migrate the database
 migrate :: a -> b
         -> Migration SqlPersistM -- ^ Database migration handler
         -> c -> CommandRunner
-migrate _ _ migration _ conf = do
+migrate _ _ migration _ (conf,_) = do
   let backend  = get' conf "database" "backend"
   let connstr  = get' conf "database" "connection_string"
   let poolsize = get' conf "database" "pool_size"
@@ -122,7 +126,7 @@ migrate _ _ migration _ conf = do
 populate :: a -> b -> c
          -> SqlPersistM () -- ^ Database populator
          -> CommandRunner
-populate _ _ _ pop conf = do
+populate _ _ _ pop (conf,_) = do
   let backend  = get' conf "database" "backend"
   let connstr  = get' conf "database" "connection_string"
   let poolsize = get' conf "database" "pool_size"
@@ -137,27 +141,31 @@ badcommand _ _ _ _ _ = die "Unknown command"
 -- |runner is the actual WAI application. It takes a request, handles
 -- it, and produces a response.
 runner :: PathInfo r
-       => (StdMethod -> r -> Handler r) -- ^ Routing function
-       -> (String -> Handler r)        -- ^ Top-level error handling function
-       -> ConfigParser                -- ^ The configuration
-       -> ConnectionPool              -- ^ Database connection reference
+       => (StdMethod -> r -> Handler r)    -- ^ Routing function
+       -> (String -> Handler r)           -- ^ Top-level error handling function
+       -> (ConfigParser, Maybe FilePath) -- ^ The configuration
+       -> ConnectionPool                 -- ^ Database connection reference
        -> Application
-runner route on500 conf = let webroot = get' conf "server" "web_root"
-                          in handleWai (fromString webroot) . process route on500 conf
+runner route on500 c@(conf,_) = let webroot = get' conf "server" "web_root"
+                                in handleWai (fromString webroot) . process route on500 c
 
 -- |Route and process a request
 -- Todo: use SqlPersistT?
 process :: PathInfo r
         => (StdMethod -> r -> Handler r) -- ^ Routing function
         -> (String -> Handler r)        -- ^ Top-level error handling function
-        -> ConfigParser                -- ^ The configuration
+        -> (ConfigParser, Maybe FilePath) -- ^ The configuration
         -> ConnectionPool              -- ^ Database connection reference
         -> MkUrl r                     -- ^ URL building function
         -> r                           -- ^ Requested route
         -> Application
-process route on500 conf pool mkurl path req = requestHandler `catchIOError` runError
+process route on500 (conf,cfile) pool mkurl path req = requestHandler `catchIOError` runError
   where requestHandler = runHandler $ route method path
         runError err   = runHandler $ on500 (show err)
-        runHandler h   = runPool (runReaderT h (conf, mkurl', req)) pool
+        runHandler h   = do
+          conf' <- case cfile of
+                    Just cf -> reloadConfigFile conf cf
+                    Nothing -> return conf
+          runPool (runReaderT h (conf', mkurl', req)) pool
         method         = forceEither . parseMethod . requestMethod $ req
         mkurl' r args  = replace "%23" "#" $ mkurl r args
