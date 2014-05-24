@@ -8,7 +8,7 @@ import System.Directory (getDirectoryContents)
 import System.FilePath.Posix (joinPath)
 import System.Random (randomRIO)
 import Web.Seacat.Configuration (conf')
-import Web.Seacat.RequestHandler (respondFile, respondFile')
+import Web.Seacat.RequestHandler (respondFile)
 import Web.Seacat.RequestHandler.Types (Handler)
 
 -- |Process a request for a static file
@@ -29,7 +29,7 @@ banner = do
   let banners' = filter (`notElem` [".", ".."]) banners
   banner <- choose banners'
 
-  respondFile' undefined $ joinPath [fileroot, banner_dir, banner]
+  respondFile undefined $ joinPath [banner_dir, banner]
 
 -- | Select a random element from a list
 choose :: MonadIO m
