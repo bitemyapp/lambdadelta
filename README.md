@@ -99,7 +99,7 @@ As above, but the name of the executable is `lambdadelta`,
 Expectations
 ------------
 
-There are some directoryes that Λδ expects to exist, relative to
+There are some directories that Λδ expects to exist, relative to
 `file_root` in the configuration,
 
  - /board/, home for all board-specific things
