@@ -1,5 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |The entry point of the Seacat module hierarchy: in this module
+-- lives everyting related to starting up an application (done under
+-- the hood with Warp and WAI), and submodules of this comprise all
+-- Seacat functionality.
 module Web.Seacat ( SeacatSettings(..)
                   , defaultSettings
                   , seacat) where
@@ -29,12 +33,15 @@ import qualified Network.Wai.Handler.Warp as W
 -- |Optional configuration for Seacat servers
 data SeacatSettings = SeacatSettings
     { _config   :: Maybe ConfigParser
-      -- ^ Default configuration, overriding the
-      -- defaults. Configuration is applied as follows, where `merge`
-      -- overrides the values in its first argument by the values in
-      -- its second,
+      -- ^ Default configuration, overriding the defaults. This should
+      -- include all application-required configuration not already
+      -- provided by Seacat. Configuration is applied as follows,
+      -- where \`merge\` overrides the values in its first argument by
+      -- the values in its second,
       --
-      --     seacat defaults `merge` application config `merge` user config
+      --     seacat defaults \`merge\` application config \`merge\` user config
+      --
+      -- This ensures that all the required configuration values are set.
 
     , _migrate  :: Maybe (Migration SqlPersistM)
       -- ^ Database migration handler. If a database is used, this must
@@ -46,7 +53,8 @@ data SeacatSettings = SeacatSettings
       -- runserver).
     }
 
--- |Default configuration
+-- |Default configuration: no application-specific configuration, no
+-- migration handler, and no population handler.
 defaultSettings :: SeacatSettings
 defaultSettings = SeacatSettings { _config   = Nothing
                                  , _migrate  = Nothing

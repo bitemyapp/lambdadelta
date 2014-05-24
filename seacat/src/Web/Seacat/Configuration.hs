@@ -1,5 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 
+-- |Configuration file handling. This module re-exports `ConfgParser`
+-- and `get` from `Data.ConfigFile`, as pretty much all applications
+-- will want to use those in conjunction with this module.
 module Web.Seacat.Configuration ( ConfigParser
                                 , loadConfigFile
                                 , reloadConfigFile
@@ -26,7 +29,8 @@ import Web.Seacat.RequestHandler.Types (RequestProcessor, askConf)
 -- errors, giving the user a better error message than just "oops,
 -- something went wrong"
 --
--- String interpolation is turned on (with a depth of 10)
+-- String interpolation is turned on (with a depth of 10). See the
+-- `Data.ConfigParser` documentation for details on that.
 --
 -- This sets all of the configuration values expected by the main
 -- application to their defaults if they weren't present already, but
@@ -43,13 +47,21 @@ loadConfigFileUnsafe filename = do
   return . merge defaults $ forceEither cp
 
 -- |Reload and reapply the configuration file. If an error is raised,
--- fall back to the original configuration.
+-- fall back to the original configuration. Specifically, this merges
+-- the new configuration with the old, so if the new configuration has
+-- removed a required setting, this won't cause a problem.
 reloadConfigFile :: ConfigParser    -- ^ The original configuration
                  -> FilePath        -- ^ The config file to load
                  -> IO ConfigParser -- ^ The new configuration
 reloadConfigFile cfg filename = ((`merge` cfg) <$> loadConfigFileUnsafe filename) `catchIOError` const (return cfg)
 
--- |Default configuration values
+-- |Default configuration values:
+--
+-- - Listen on *:3000
+-- - Use http://localhost:3000 as the basis for all URLs
+-- - Use /tmp as the basis for all file look-ups
+-- - Use a sqlite database called seacat.sqlite with 10 connections.
+
 defaults :: ConfigParser
 defaults = forceEither . readstring emptyCP $ unlines
   [ "[server]"
@@ -59,7 +71,7 @@ defaults = forceEither . readstring emptyCP $ unlines
   , "file_root = /tmp"
   , "[database]"
   , "backend           = sqlite"
-  , "connection_string = lambdadelta.sqlite"
+  , "connection_string = seacat.sqlite"
   , "pool_size         = 10"
   ]
 
@@ -70,15 +82,25 @@ applyUserConfig :: ConfigParser       -- ^ The standard configuration
 applyUserConfig cfg (Just usercfg) = usercfg `merge` cfg
 applyUserConfig cfg _ = cfg
 
--- |Get a value from the configuration unsafely
+-- |Get a value from the configuration unsafely (throws an
+-- `IOException` on fail).
 get' :: Get_C a => ConfigParser -> SectionSpec -> OptionSpec -> a
 get' cp ss os = forceEither $ get cp ss os
 
--- |Get a value from the configuration in a handler, abstracting the
--- askConf/get pattern
+-- |Get a value from the configuration in a handler. I found as I was
+-- using Seacat that my handlers all started with a block of the form,
+--
+-- > cfg <- askConf
+-- > foo = get cfg "section" "foo"
+-- > bar = get cfg "section" "bar"
+-- > baz = get cfg "section" "baz"
+--
+-- This simplifies that by getting rid of the need to use `askConf`
+-- manually.
 conf :: (Get_C a, MonadError CPError m, PathInfo r) => SectionSpec -> OptionSpec -> RequestProcessor r (m a)
 conf ss os = askConf >>= \config -> return $ get config ss os
 
--- |Get a value from the configuration in a handler unsafely
+-- |Get a value from the configuration in a handler unsafely. Like
+-- `conf`, but throws an `IOException` if the value can't be found.
 conf' :: (Get_C a, PathInfo r) => SectionSpec -> OptionSpec -> RequestProcessor r a
 conf' ss os = askConf >>= \config -> return $ get' config ss os
