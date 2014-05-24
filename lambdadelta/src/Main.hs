@@ -14,14 +14,17 @@ import Handler.User
 import Network.HTTP.Types.Method (StdMethod(..))
 import Routes (Sitemap(..))
 import Web.Routes.PathInfo (toPathSegments)
-import Web.Seacat (seacat')
+import Web.Seacat
 import Web.Seacat.RequestHandler.OnMethod (onPost)
 import Web.Seacat.RequestHandler.Types (Handler)
 
 import qualified Database as D
 
 main :: IO ()
-main = seacat' defaults route error500 migrateAll populate
+main = seacat route error500 $ defaultSettings { _config = Just defaults
+                                               , _migrate = Just migrateAll
+                                               , _populate = Just populate
+                                               }
 
 -- |Populate the database with sample data
 populate :: SqlPersistM ()

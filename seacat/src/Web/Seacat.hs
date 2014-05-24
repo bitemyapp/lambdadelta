@@ -1,16 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Web.Seacat (seacat, seacat') where
+module Web.Seacat ( SeacatSettings(..)
+                  , defaultSettings
+                  , seacat) where
 
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (runReaderT)
 import Data.Either.Utils (forceEither)
-import Data.Text (replace)
+import Data.Maybe (fromJust)
 import Data.String (fromString)
+import Data.Text (replace)
 import Database.Persist.Sql (ConnectionPool, Migration, SqlPersistM, runMigration)
 import Network.HTTP.Types.Method (StdMethod(..), parseMethod)
 import Network.Wai (Application, requestMethod)
-import Network.Wai.Handler.Warp (defaultSettings, runSettings, setHost, setPort)
+import Network.Wai.Handler.Warp (runSettings, setHost, setPort)
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.IO.Error (catchIOError)
@@ -21,34 +24,44 @@ import Web.Seacat.Configuration (ConfigParser, applyUserConfig, loadConfigFile, 
 import Web.Seacat.Database (runPool, withPool, withDB, migrateAll)
 import Web.Seacat.RequestHandler.Types (Handler, MkUrl)
 
--- |Wrapper for seacat'' in the case where there is no config.
+import qualified Network.Wai.Handler.Warp as W
+
+-- |Optional configuration for Seacat servers
+data SeacatSettings = SeacatSettings
+    { _config   :: Maybe ConfigParser
+      -- ^ Default configuration, overriding the
+      -- defaults. Configuration is applied as follows, where `merge`
+      -- overrides the values in its first argument by the values in
+      -- its second,
+      --
+      --     seacat defaults `merge` application config `merge` user config
+
+    , _migrate  :: Maybe (Migration SqlPersistM)
+      -- ^ Database migration handler. If a database is used, this must
+      -- be provided (or migrations handled manually in runserver).
+
+    , _populate :: Maybe (SqlPersistM ())
+      -- ^ Database population handler. If a database is used, this
+      -- must be provided (or population handled manually in
+      -- runserver).
+    }
+
+-- |Default configuration
+defaultSettings :: SeacatSettings
+defaultSettings = SeacatSettings { _config   = Nothing
+                                 , _migrate  = Nothing
+                                 , _populate = Nothing
+                                 }
+
+-- |Launch the Seacat web server. Seacat takes two bits of mandatory
+-- configuration, a routing function and a 500 handler, and then some
+-- optional configuration. By default, the server listens on *:3000.
 seacat :: PathInfo r
        => (StdMethod -> r -> Handler r) -- ^ Routing function
-       -> (String -> Handler r)        -- ^ Top-level error handling function
-       -> Migration SqlPersistM       -- ^ Database migration handler
-       -> SqlPersistM ()               -- ^ Database populator
+       -> (String -> Handler r) -- ^ Top-level error handling function
+       -> SeacatSettings -- ^ Optional configuration
        -> IO ()
-seacat = seacat'' Nothing
-
--- |Wrapper for seacat'' in the case where there is config.
-seacat' :: PathInfo r
-        => ConfigParser                -- ^ Application-specific default configuration (overrides defaults)
-        -> (StdMethod -> r -> Handler r) -- ^ Routing function
-        -> (String -> Handler r)        -- ^ Top-level error handling function
-        -> Migration SqlPersistM       -- ^ Database migration handler
-        -> SqlPersistM ()               -- ^ Database populator
-        -> IO ()
-seacat' cfg = seacat'' $ Just cfg
-
--- |Fire up the appropriate process, depending on the command.
-seacat'' :: PathInfo r
-         => Maybe ConfigParser          -- ^ Optional configuration (overrides defaults)
-         -> (StdMethod -> r -> Handler r) -- ^ Routing function
-         -> (String -> Handler r)        -- ^ Top-level error handling function
-         -> Migration SqlPersistM       -- ^ Database migration handler
-         -> SqlPersistM ()               -- ^ Database populator
-         -> IO ()
-seacat'' cfg route on500 migration pop = do
+seacat route on500 settings = do
   args <- getArgs
 
   when (length args < 1) $
@@ -65,7 +78,7 @@ seacat'' cfg route on500 migration pop = do
              Nothing -> return $ Just defaults
 
   case config of
-    Just conf -> run command route on500 migration pop (applyUserConfig conf cfg, confFile)
+    Just conf -> run command route on500 confFile $ settings { _config = Just $ applyUserConfig conf (_config settings) }
     Nothing   -> die "Failed to read configuration"
 
 -- |Die with a fatal error
@@ -75,17 +88,14 @@ die err = putStrLn err >> exitFailure
 
 -------------------------
 
--- |Function which runs an IO command (eg, runserver)
-type CommandRunner = (ConfigParser, Maybe FilePath) -> IO ()
-
 -- |Run one of the applications, depending on the command
 run :: PathInfo r
-    => String                      -- ^ Command
+    => String -- ^ Command
     -> (StdMethod -> r -> Handler r) -- ^ Routing function
-    -> (String -> Handler r)        -- ^ Top-level error handling function
-    -> Migration SqlPersistM       -- ^ Database migration handler
-    -> SqlPersistM ()               -- ^ Database populator
-    -> CommandRunner
+    -> (String -> Handler r) -- ^ Top-level error handling function
+    -> Maybe FilePath -- ^ The config file
+    -> SeacatSettings -- ^ The optional settings
+    -> IO ()
 run "runserver" = runserver
 run "migrate"   = migrate
 run "populate"  = populate
@@ -93,10 +103,14 @@ run _           = badcommand
 
 -- |Run the server
 runserver :: PathInfo r
-          => (StdMethod -> r -> Handler r) -- ^ Routing function
-          -> (String -> Handler r)        -- ^ Top-level error handling function
-          -> a -> b -> CommandRunner
-runserver route on500 _ _ c@(conf,_) = do
+          => (StdMethod -> r -> Handler r)
+          -> (String -> Handler r)
+          -> Maybe FilePath
+          -> SeacatSettings
+          -> IO ()
+runserver route on500 cfile settings = do
+  let conf = fromJust $ _config settings
+
   let host = get' conf "server" "host"
   let port = get' conf "server" "port"
 
@@ -104,36 +118,57 @@ runserver route on500 _ _ c@(conf,_) = do
   let connstr  = get' conf "database" "connection_string" 
   let poolsize = get' conf "database" "pool_size"
 
-  let settings = setHost (fromString host) . setPort port $ defaultSettings
+  let settings = setHost (fromString host) . setPort port $ W.defaultSettings
 
   putStrLn $ "Starting Seacat on " ++ host ++ ":" ++ show port
   withPool (fromString backend) (fromString connstr) poolsize $
-    runSettings settings . runner route on500 c
+    runSettings settings . runner route on500 (conf,cfile)
 
 -- |Migrate the database
-migrate :: a -> b
-        -> Migration SqlPersistM -- ^ Database migration handler
-        -> c -> CommandRunner
-migrate _ _ migration _ (conf,_) = do
-  let backend  = get' conf "database" "backend"
-  let connstr  = get' conf "database" "connection_string"
-  let poolsize = get' conf "database" "pool_size"
-  withDB (fromString backend) (fromString connstr) poolsize $ runMigration migrateAll
-  withDB (fromString backend) (fromString connstr) poolsize $ runMigration migration
+migrate :: PathInfo r
+        => (StdMethod -> r -> Handler r)
+        -> (String -> Handler r)
+        -> Maybe FilePath
+        -> SeacatSettings
+        -> IO ()
+migrate _ _ _ settings =
+    case _migrate settings of
+      Just migration -> do
+        let conf = fromJust $ _config settings
+        let backend  = get' conf "database" "backend"
+        let connstr  = get' conf "database" "connection_string"
+        let poolsize = get' conf "database" "pool_size"
+        withDB (fromString backend) (fromString connstr) poolsize $ runMigration migrateAll
+        withDB (fromString backend) (fromString connstr) poolsize $ runMigration migration
+
+      Nothing -> die "No migration handler."
 
 -- |Populate the database with test data
-populate :: a -> b -> c
-         -> SqlPersistM () -- ^ Database populator
-         -> CommandRunner
-populate _ _ _ pop (conf,_) = do
-  let backend  = get' conf "database" "backend"
-  let connstr  = get' conf "database" "connection_string"
-  let poolsize = get' conf "database" "pool_size"
-  withDB (fromString backend) (fromString connstr) poolsize pop
+populate :: PathInfo r
+         => (StdMethod -> r -> Handler r)
+         -> (String -> Handler r)
+         -> Maybe FilePath
+         -> SeacatSettings
+         -> IO ()
+populate _ _ _ settings =
+    case _populate settings of
+      Just pop -> do
+        let conf = fromJust $ _config settings
+        let backend  = get' conf "database" "backend"
+        let connstr  = get' conf "database" "connection_string"
+        let poolsize = get' conf "database" "pool_size"
+        withDB (fromString backend) (fromString connstr) poolsize pop
+
+      Nothing -> die "No population handler."
 
 -- |Fail with an error
-badcommand :: a -> b -> c -> d -> CommandRunner
-badcommand _ _ _ _ _ = die "Unknown command"
+badcommand :: PathInfo r
+           => (StdMethod -> r -> Handler r)
+           -> (String -> Handler r)
+           -> Maybe FilePath
+           -> SeacatSettings
+           -> IO ()
+badcommand _ _ _ _ = die "Unknown command"
 
 -------------------------
 
