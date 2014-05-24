@@ -57,18 +57,9 @@ IPBan
     applies String Maybe
     expires UTCTime
     reason  Text
-    -- Todo: write a fielddef instance for SockAddr, rather than just
-    -- `show`ing it
-    target  String
-    deriving Show
-
-IPRangeBan
-    applies String Maybe
-    expires UTCTime
-    reason  Text
 
     -- These are IP addresses converted to numbers for comparison.
-    -- Todo: Use a proper IP range type (requires writing fielddefs)
+    -- Todo: Use a proper IP range type (requires more instances)
     start Rational
     stop  Rational
     deriving Show

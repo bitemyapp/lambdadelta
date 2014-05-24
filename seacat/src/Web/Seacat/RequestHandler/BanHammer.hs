@@ -86,28 +86,18 @@ ipBan tag onBan handler = do
   now <- liftIO getCurrentTime
 
   deleteWhere [IPBanExpires <. now]
-  deleteWhere [IPRangeBanExpires <. now]
 
   ban <- selectFirst ([ IPBanApplies ==. tag
-                     , IPBanTarget  ==. show ip
+                     , IPBanStart <=. ipToRational ip
+                     , IPBanStop >=. ipToRational ip
                      ] ||.
                      [ IPBanApplies ==. Nothing
-                     , IPBanTarget  ==. show ip
+                     , IPBanStart <=. ipToRational ip
+                     , IPBanStop >=. ipToRational ip
                      ]) []
-
-  rangeBan <- selectFirst ([ IPRangeBanApplies ==. tag
-                          , IPRangeBanStart <=. ipToRational ip
-                          , IPRangeBanStop >=. ipToRational ip
-                          ] ||.
-                          [ IPRangeBanApplies ==. Nothing
-                          , IPRangeBanStart <=. ipToRational ip
-                          , IPRangeBanStop >=. ipToRational ip
-                          ]) []
   case ban of
     Just (Entity _ ipban) -> onBan (iPBanExpires ipban) (iPBanReason ipban)
-    Nothing -> case rangeBan of
-                Just (Entity _ rangeban) -> onBan (iPRangeBanExpires rangeban) (iPRangeBanReason rangeban)
-                Nothing -> handler
+    Nothing -> handler
 
 -- |Convert an IP address into a Rational, the type I'm using in the
 -- database to represent them.
