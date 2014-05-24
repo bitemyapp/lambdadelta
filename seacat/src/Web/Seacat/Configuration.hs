@@ -47,7 +47,7 @@ loadConfigFileUnsafe filename = do
 reloadConfigFile :: ConfigParser    -- ^ The original configuration
                  -> FilePath        -- ^ The config file to load
                  -> IO ConfigParser -- ^ The new configuration
-reloadConfigFile cfg filename = (fmap (flip merge cfg) $ loadConfigFileUnsafe filename) `catchIOError` const (return cfg)
+reloadConfigFile cfg filename = ((`merge` cfg) <$> loadConfigFileUnsafe filename) `catchIOError` const (return cfg)
 
 -- |Default configuration values
 defaults :: ConfigParser

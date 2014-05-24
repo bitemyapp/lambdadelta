@@ -33,7 +33,7 @@ rateLimit :: PathInfo r
 rateLimit tag freq onLimit handler = do
   ip <- (show . remoteHost) <$> askReq
 
-  now <- liftIO $ getCurrentTime
+  now <- liftIO getCurrentTime
 
   deleteWhere [RateLimitExpires <. now]
 
@@ -61,7 +61,7 @@ ipBan :: PathInfo r => Maybe String -> (UTCTime -> Text -> Handler r) -> Handler
 ipBan tag onBan handler = do
   ip <- remoteHost <$> askReq
 
-  now <- liftIO $ getCurrentTime
+  now <- liftIO getCurrentTime
 
   deleteWhere [IPBanExpires <. now]
   deleteWhere [IPRangeBanExpires <. now]

@@ -66,7 +66,7 @@ seacat'' cfg route on500 migration pop = do
              Nothing -> return $ Just defaults
 
   case config of
-    Just conf -> run command route on500 migration pop ((applyUserConfig conf cfg), confFile)
+    Just conf -> run command route on500 migration pop (applyUserConfig conf cfg, confFile)
     Nothing   -> die "Failed to read configuration"
 
 -- |Die with a fatal error
