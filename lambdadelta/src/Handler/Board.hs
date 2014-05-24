@@ -10,7 +10,6 @@ import Database.Persist
 import Handler.Templates (TThread(..))
 import Routes (Sitemap)
 import Web.Seacat.Configuration (conf')
-import Web.Seacat.Database
 import Web.Seacat.RequestHandler.Types (RequestProcessor)
 
 import qualified Database as D
@@ -64,10 +63,13 @@ getThread limit (Entity opid op) = do
 
   return $ TThread opFile op omittedReplies omittedImages posts'
 
-
 -- |Get the image for a post
 getPostImage :: Post -- ^ The post
              -> RequestProcessor Sitemap (Maybe D.File, Post)
 getPostImage post = case postFile post of
                       Just fileid -> get fileid >>= \file -> return (file, post)
                       Nothing -> return (Nothing, post)
+
+-- |Extract the value from an Entity
+unentity :: Entity a -> a
+unentity (Entity _ e) = e

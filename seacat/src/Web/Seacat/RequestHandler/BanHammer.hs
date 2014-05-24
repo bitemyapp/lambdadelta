@@ -13,7 +13,7 @@ import Database.Persist
 import Network.Socket (SockAddr(..))
 import Network.Wai (remoteHost)
 import Web.Routes.PathInfo (PathInfo)
-import Web.Seacat.Database.Internal
+import Web.Seacat.Database
 import Web.Seacat.RequestHandler.Types (Handler, askReq)
 
 -- |Rate limit a particular route. This only looks at individual IPs,

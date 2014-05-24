@@ -18,8 +18,7 @@ import Web.Routes.PathInfo (PathInfo)
 import Web.Routes.Wai (handleWai)
 
 import Web.Seacat.Configuration (ConfigParser, applyUserConfig, loadConfigFile, reloadConfigFile, defaults, get')
-import Web.Seacat.Database (runPool, withPool, withDB)
-import Web.Seacat.Database.Internal (migrateAll)
+import Web.Seacat.Database (runPool, withPool, withDB, migrateAll)
 import Web.Seacat.RequestHandler.Types (Handler, MkUrl)
 
 -- |Wrapper for seacat'' in the case where there is no config.

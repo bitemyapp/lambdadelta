@@ -1,19 +1,18 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, GADTs, OverloadedStrings, QuasiQuotes, TemplateHaskell, TypeFamilies #-}
 
-module Web.Seacat.Database ( withDB
-                           , withPool
-                           , runPool
-                           , unentity) where
+module Web.Seacat.Database where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Control (MonadBaseControl)
+import Data.String (IsString, fromString)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
-import Data.String (IsString, fromString)
+import Data.Time (UTCTime)
 import Database.Persist hiding (runPool)
 import Database.Persist.Postgresql (withPostgresqlPool)
 import Database.Persist.Sql (ConnectionPool, SqlPersistM, runSqlPersistMPool)
 import Database.Persist.Sqlite (withSqlitePool)
+import Database.Persist.TH
 
 -- |List of database backends
 data Backend = Sqlite | Postgres
@@ -50,6 +49,34 @@ withPool Postgres = withPostgresqlPool . encodeUtf8
 runPool :: SqlPersistM a -> ConnectionPool -> IO a
 runPool = runSqlPersistMPool
 
--- |Turn a database entity into a value
-unentity :: Entity a -> a
-unentity (Entity _ val) = val
+--------------------
+
+share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
+IPBan
+    -- Where the limit applies. Nothing applies to all checked
+    -- routes. (Just x) applies to all routes tagged x.
+    applies String Maybe
+    expires UTCTime
+    reason  Text
+    -- Todo: write a fielddef instance for SockAddr, rather than just
+    -- `show`ing it
+    target  String
+    deriving Show
+
+IPRangeBan
+    applies String Maybe
+    expires UTCTime
+    reason  Text
+
+    -- These are IP addresses converted to numbers for comparison.
+    -- Todo: Use a proper IP range type (requires writing fielddefs)
+    start Rational
+    stop  Rational
+    deriving Show
+
+RateLimit
+    applies String Maybe
+    expires UTCTime
+    target  String
+    deriving Show
+|]
