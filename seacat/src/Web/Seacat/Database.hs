@@ -52,9 +52,8 @@ runPool = runSqlPersistMPool
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 IPBan
-    -- Where the limit applies. Nothing applies to all checked
-    -- routes. (Just x) applies to all routes tagged x.
-    applies String Maybe
+    -- Name used to identify routes where the ban applies
+    applies Text
     expires UTCTime
     reason  Text
 
@@ -65,13 +64,13 @@ IPBan
     deriving Show
 
 RateLimit
-    applies String Maybe
+    applies Text
     expires UTCTime
     target  String
     deriving Show
 
 AntiFlood
-    applies String Maybe
+    applies Text
     when UTCTime
     target String
     deriving Show
