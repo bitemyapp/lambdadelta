@@ -69,4 +69,10 @@ RateLimit
     expires UTCTime
     target  String
     deriving Show
+
+AntiFlood
+    applies String Maybe
+    when UTCTime
+    target String
+    deriving Show
 |]

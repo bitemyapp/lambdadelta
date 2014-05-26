@@ -2,6 +2,7 @@
 
 -- |Higher-level handlers to do with banning people.
 module Web.Seacat.RequestHandler.BanHammer ( ipBan
+                                           , floodProtect
                                            , rateLimit
                                            , rateLimit') where
 
@@ -116,3 +117,38 @@ ipToRational (SockAddrInet6 _ _ (a, b, c, d) _) = let a' = shift (fromIntegral a
                                                       d' = fromIntegral d
                                                   in fromIntegral $ a' .|. b' .|. c' .|. d'
 ipToRational (SockAddrUnix _) = -1
+
+--------------------
+
+-- |Flood protect a particular route. This only looks at individual
+-- IPs and not ranges.
+floodProtect :: PathInfo r
+             => Maybe String -- ^ The tag of the route. This works as
+                            -- in `ipBan`
+             -> NominalDiffTime -- ^ The time period covered by the
+                               -- protection
+             -> Int -- ^ How many times in the time period an IP can
+                   -- access this tag.
+             -> Handler r -- ^ The handler to use if limited
+             -> Handler r
+             -> Handler r
+floodProtect tag time accesses onFlood handler = do
+  ip <- (show . remoteHost) <$> askReq
+  now <- liftIO getCurrentTime
+
+  deleteWhere [ AntiFloodApplies ==. tag
+              , AntiFloodWhen <. addUTCTime (-time) now
+              ]
+
+  flood <- ((>=accesses) . length) <$> selectList ([ AntiFloodApplies ==. tag
+                                                 , AntiFloodTarget  ==. ip
+                                                 ] ||.
+                                                 [ AntiFloodApplies ==. Nothing
+                                                 , AntiFloodTarget  ==. ip
+                                                 ]) []
+
+  if flood
+  then onFlood
+  else do
+    _ <- insert $ AntiFlood tag now ip
+    handler
