@@ -50,6 +50,8 @@ commands are as follows,
             database).
  - populate: Populate the database with sample data.
  - runserver: Run the Seacat server.
+ - clean: Clean out expired ban/limit records (also done every
+          `runserver`).
 
 Note: Seacat itself uses a database for IP banning and rate limiting,
 so if you use those features you need to run a migrate, even if you

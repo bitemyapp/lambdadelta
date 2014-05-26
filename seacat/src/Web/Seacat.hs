@@ -8,12 +8,14 @@ module Web.Seacat ( SeacatSettings(..)
                   , defaultSettings
                   , seacat) where
 
-import Control.Monad (when)
+import Control.Monad (when, void)
 import Control.Monad.Trans.Reader (runReaderT)
 import Data.Either.Utils (forceEither)
 import Data.Maybe (fromJust)
 import Data.String (fromString)
 import Data.Text (replace)
+import Data.Time.Clock (getCurrentTime)
+import Database.Persist ((<.), deleteWhere)
 import Database.Persist.Sql (ConnectionPool, Migration, SqlPersistM, runMigration)
 import Network.HTTP.Types.Method (StdMethod(..), parseMethod)
 import Network.Wai (Application, requestMethod)
@@ -25,7 +27,7 @@ import Web.Routes.PathInfo (PathInfo)
 import Web.Routes.Wai (handleWai)
 
 import Web.Seacat.Configuration (ConfigParser, applyUserConfig, loadConfigFile, reloadConfigFile, defaults, get')
-import Web.Seacat.Database (runPool, withPool, withDB, migrateAll)
+import Web.Seacat.Database
 import Web.Seacat.RequestHandler.Types (Handler, MkUrl)
 
 import qualified Network.Wai.Handler.Warp as W
@@ -51,6 +53,9 @@ data SeacatSettings = SeacatSettings
       -- ^ Database population handler. If a database is used, this
       -- must be provided (or population handled manually in
       -- runserver).
+
+    , _clean :: Maybe (SqlPersistM ())
+      -- ^ Database clean handler. This is optional.
     }
 
 -- |Default configuration: no application-specific configuration, no
@@ -59,6 +64,7 @@ defaultSettings :: SeacatSettings
 defaultSettings = SeacatSettings { _config   = Nothing
                                  , _migrate  = Nothing
                                  , _populate = Nothing
+                                 , _clean    = Nothing
                                  }
 
 -- |Launch the Seacat web server. Seacat takes two bits of mandatory
@@ -107,6 +113,7 @@ run :: PathInfo r
 run "runserver" = runserver
 run "migrate"   = migrate
 run "populate"  = populate
+run "clean"     = clean
 run _           = badcommand
 
 -- |Run the server
@@ -125,6 +132,8 @@ runserver route on500 cfile settings = do
   let backend  = get' conf "database" "backend"
   let connstr  = get' conf "database" "connection_string" 
   let poolsize = get' conf "database" "pool_size"
+
+  void $ clean route on500 cfile settings
 
   let settings = setHost (fromString host) . setPort port $ W.defaultSettings
 
@@ -147,8 +156,7 @@ migrate _ _ _ settings = do
   withDB (fromString backend) (fromString connstr) poolsize $ runMigration migrateAll
 
   case _migrate settings of
-    Just migration -> do
-      withDB (fromString backend) (fromString connstr) poolsize $ runMigration migration
+    Just migration -> withDB (fromString backend) (fromString connstr) poolsize $ runMigration migration
     Nothing -> putStrLn "No application migration handler."
 
 -- |Populate the database with test data
@@ -168,6 +176,31 @@ populate _ _ _ settings =
         withDB (fromString backend) (fromString connstr) poolsize pop
 
       Nothing -> die "No population handler."
+
+-- |Clean out expired bans from the database
+clean :: PathInfo r
+      => (StdMethod -> r -> Handler r)
+      -> (String -> Handler r)
+      -> Maybe FilePath
+      -> SeacatSettings
+      -> IO ()
+clean _ _ _ settings = do
+  let conf = fromJust $ _config settings
+
+  let backend  = get' conf "database" "backend"
+  let connstr  = get' conf "database" "connection_string"
+  let poolsize = get' conf "database" "pool_size"
+
+  now <- getCurrentTime
+
+  withDB (fromString backend) (fromString connstr) poolsize $ do
+    deleteWhere [RateLimitExpires <. now]
+    deleteWhere [IPBanExpires     <. now]
+    deleteWhere [AntiFloodExpires <. now]
+
+  case _clean settings of
+    Just cln -> withDB (fromString backend) (fromString connstr) poolsize cln
+    Nothing -> putStrLn "No application clean handler."
 
 -- |Fail with an error
 badcommand :: PathInfo r
