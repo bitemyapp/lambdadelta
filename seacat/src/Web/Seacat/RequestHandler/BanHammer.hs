@@ -118,7 +118,8 @@ ipToRational (SockAddrUnix _) = -1
 --------------------
 
 -- |Flood protect a particular route. This only looks at individual
--- IPs and not ranges.
+-- IPs and not ranges. If multiple routes share this tag, they should
+-- use the same time period.
 floodProtect :: PathInfo r
              => Tag
              -> NominalDiffTime
