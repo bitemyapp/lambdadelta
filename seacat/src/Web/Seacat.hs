@@ -92,7 +92,14 @@ seacat route on500 settings = do
              Nothing -> return $ Just defaults
 
   case config of
-    Just conf -> run command route on500 confFile $ settings { _config = Just $ applyUserConfig conf (_config settings) }
+    Just conf -> let backend  = get' conf "database" "backend"
+                     connstr  = get' conf "database" "connection_string" 
+                     poolsize = get' conf "database" "pool_size"
+
+                     pool = withPool (fromString backend) (fromString connstr) poolsize
+
+                     settings' = settings { _config = Just $ applyUserConfig conf (_config settings) }
+                 in run command route on500 confFile pool settings'
     Nothing   -> die "Failed to read configuration"
 
 -- |Die with a fatal error
@@ -108,6 +115,7 @@ run :: PathInfo r
     -> (StdMethod -> r -> Handler r) -- ^ Routing function
     -> (String -> Handler r) -- ^ Top-level error handling function
     -> Maybe FilePath -- ^ The config file
+    -> ((ConnectionPool -> IO ()) -> IO ()) -- ^ Database connection pool runner
     -> SeacatSettings -- ^ The optional settings
     -> IO ()
 run "runserver" = runserver
@@ -121,42 +129,35 @@ runserver :: PathInfo r
           => (StdMethod -> r -> Handler r)
           -> (String -> Handler r)
           -> Maybe FilePath
+          -> ((ConnectionPool -> IO ()) -> IO ())
           -> SeacatSettings
           -> IO ()
-runserver route on500 cfile settings = do
+runserver route on500 cfile pool settings = do
   let conf = fromJust $ _config settings
 
   let host = get' conf "server" "host"
   let port = get' conf "server" "port"
 
-  let backend  = get' conf "database" "backend"
-  let connstr  = get' conf "database" "connection_string" 
-  let poolsize = get' conf "database" "pool_size"
-
-  void $ clean route on500 cfile settings
+  void $ clean route on500 cfile pool settings
 
   let settings = setHost (fromString host) . setPort port $ W.defaultSettings
 
   putStrLn $ "Starting Seacat on " ++ host ++ ":" ++ show port
-  withPool (fromString backend) (fromString connstr) poolsize $
-    runSettings settings . runner route on500 (conf,cfile)
+  pool $ runSettings settings . runner route on500 (conf,cfile)
 
 -- |Migrate the database
 migrate :: PathInfo r
         => (StdMethod -> r -> Handler r)
         -> (String -> Handler r)
         -> Maybe FilePath
+        -> ((ConnectionPool -> IO ()) -> IO ())
         -> SeacatSettings
         -> IO ()
-migrate _ _ _ settings = do
-  let conf = fromJust $ _config settings
-  let backend  = get' conf "database" "backend"
-  let connstr  = get' conf "database" "connection_string"
-  let poolsize = get' conf "database" "pool_size"
-  withDB (fromString backend) (fromString connstr) poolsize $ runMigration migrateAll
+migrate _ _ _ pool settings = do
+  runDB pool $ runMigration migrateAll
 
   case _migrate settings of
-    Just migration -> withDB (fromString backend) (fromString connstr) poolsize $ runMigration migration
+    Just migration -> runDB pool $ runMigration migration
     Nothing -> putStrLn "No application migration handler."
 
 -- |Populate the database with test data
@@ -164,17 +165,12 @@ populate :: PathInfo r
          => (StdMethod -> r -> Handler r)
          -> (String -> Handler r)
          -> Maybe FilePath
+         -> ((ConnectionPool -> IO ()) -> IO ())
          -> SeacatSettings
          -> IO ()
-populate _ _ _ settings =
+populate _ _ _ pool settings =
     case _populate settings of
-      Just pop -> do
-        let conf = fromJust $ _config settings
-        let backend  = get' conf "database" "backend"
-        let connstr  = get' conf "database" "connection_string"
-        let poolsize = get' conf "database" "pool_size"
-        withDB (fromString backend) (fromString connstr) poolsize pop
-
+      Just pop -> runDB pool pop
       Nothing -> die "No population handler."
 
 -- |Clean out expired bans from the database
@@ -182,24 +178,19 @@ clean :: PathInfo r
       => (StdMethod -> r -> Handler r)
       -> (String -> Handler r)
       -> Maybe FilePath
+      -> ((ConnectionPool -> IO ()) -> IO ())
       -> SeacatSettings
       -> IO ()
-clean _ _ _ settings = do
-  let conf = fromJust $ _config settings
-
-  let backend  = get' conf "database" "backend"
-  let connstr  = get' conf "database" "connection_string"
-  let poolsize = get' conf "database" "pool_size"
-
+clean _ _ _ pool settings = do
   now <- getCurrentTime
 
-  withDB (fromString backend) (fromString connstr) poolsize $ do
+  runDB pool $ do
     deleteWhere [RateLimitExpires <. now]
     deleteWhere [IPBanExpires     <. now]
     deleteWhere [AntiFloodExpires <. now]
 
   case _clean settings of
-    Just cln -> withDB (fromString backend) (fromString connstr) poolsize cln
+    Just cln -> runDB pool cln
     Nothing -> putStrLn "No application clean handler."
 
 -- |Fail with an error
@@ -207,9 +198,10 @@ badcommand :: PathInfo r
            => (StdMethod -> r -> Handler r)
            -> (String -> Handler r)
            -> Maybe FilePath
+           -> ((ConnectionPool -> IO ()) -> IO ())
            -> SeacatSettings
            -> IO ()
-badcommand _ _ _ _ = die "Unknown command"
+badcommand _ _ _ _ _ = die "Unknown command"
 
 -------------------------
 
