@@ -71,7 +71,7 @@ RateLimit
 
 AntiFlood
     applies Text
-    when UTCTime
-    target String
+    expires UTCTime
+    target  String
     deriving Show
 |]

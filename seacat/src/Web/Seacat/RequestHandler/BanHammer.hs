@@ -134,9 +134,7 @@ floodProtect tag time accesses onFlood handler = do
   ip <- (show . remoteHost) <$> askReq
   now <- liftIO getCurrentTime
 
-  deleteWhere [ AntiFloodApplies ==. tag
-              , AntiFloodWhen <. addUTCTime (-time) now
-              ]
+  deleteWhere [AntiFloodExpires <. now]
 
   flood <- ((>=accesses) . length) <$> selectList [ AntiFloodApplies ==. tag
                                                 , AntiFloodTarget  ==. ip
@@ -145,5 +143,6 @@ floodProtect tag time accesses onFlood handler = do
   if flood
   then onFlood
   else do
-    _ <- insert $ AntiFlood tag now ip
+    let expires = addUTCTime time now
+    _ <- insert $ AntiFlood tag expires ip
     handler
