@@ -88,6 +88,7 @@ library
                      , time >=1.4 && <1.5
                      , transformers >=0.3 && <0.5
                      , wai >=2.1 && <2.2
+                     , wai-middleware-static >=0.5 && <0.6
                      , warp >=2.1 && <2.2
                      , web-routes >=0.27 && <0.28
                      , web-routes-wai >=0.23 && <0.24

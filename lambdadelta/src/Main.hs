@@ -13,7 +13,6 @@ import Handler.File
 import Handler.User
 import Network.HTTP.Types.Method (StdMethod(..))
 import Routes (Sitemap(..))
-import Web.Routes.PathInfo (toPathSegments)
 import Web.Seacat
 import Web.Seacat.RequestHandler.OnMethod (onPost)
 import Web.Seacat.RequestHandler.Types (Handler)
@@ -36,14 +35,13 @@ populate = do
 -- These pattern matches must cover all cases, as otherwise an
 -- internal server error might be raised in Seacat
 route :: StdMethod -> Sitemap -> Handler Sitemap
-route GET  Index           = index
-route GET  (Board b p)     = board b p
-route GET  (Thread b t)    = thread b t
-route GET  Banner          = banner
-route GET  Error404        = error404 "File not found"
-route _    (PostThread b)  = error405 "Method not allowed" `onPost` postThread b
-route _    (PostReply b t) = error405 "Method not allowed" `onPost` postReply b t
-route GET  path            = static (error404 "File not found") $ toPathSegments path
+route GET Index           = index
+route GET (Board b p)     = board b p
+route GET (Thread b t)    = thread b t
+route GET Banner          = banner
+route GET Error404        = error404 "File not found"
+route _   (PostThread b)  = error405 "Method not allowed" `onPost` postThread b
+route _   (PostReply b t) = error405 "Method not allowed" `onPost` postReply b t
 route _ _                  = error405 "Method not allowed"
 
 -- |Default configuration values

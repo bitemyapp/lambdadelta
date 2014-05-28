@@ -20,6 +20,7 @@ import Database.Persist.Sql (ConnectionPool, Migration, SqlPersistM, runMigratio
 import Network.HTTP.Types.Method (StdMethod(..), parseMethod)
 import Network.Wai (Application, requestMethod)
 import Network.Wai.Handler.Warp (runSettings, setHost, setPort)
+import Network.Wai.Middleware.Static (addBase, staticPolicy)
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.IO.Error (catchIOError)
@@ -213,8 +214,12 @@ runner :: PathInfo r
        -> (ConfigParser, Maybe FilePath) -- ^ The configuration
        -> ConnectionPool                 -- ^ Database connection reference
        -> Application
-runner route on500 c@(conf,_) = let webroot = get' conf "server" "web_root"
-                                in handleWai (fromString webroot) . process route on500 c
+runner route on500 c@(conf,_) pool = handleWai (fromString webroot) $ \mkurl r ->
+  staticPolicy (addBase fileroot) $
+  process route on500 c pool mkurl r
+
+  where webroot  = get' conf "server" "web_root"
+        fileroot = get' conf "server" "file_root"
 
 -- |Route and process a request
 -- Todo: use SqlPersistT?
