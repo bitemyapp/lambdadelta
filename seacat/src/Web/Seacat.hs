@@ -267,9 +267,11 @@ runHandler h conf cfile pool mkurl req = do
   let cry = Cry { _req    = req
                 , _params = map (decodeUtf8 *** decodeUtf8) ps
                 , _files  = map (first decodeUtf8) fs
+                , _conf   = conf'
+                , _mkurl  = mkurl'
                 }
 
-  runPool (runReaderT h (conf', mkurl', cry)) pool
+  runPool (runReaderT h cry) pool
 
   where mkurl' r args = replace "%23" "#" $ mkurl r args
   -- ^ This is horrific, come up with a better way of doing it
