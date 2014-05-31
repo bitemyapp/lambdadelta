@@ -28,7 +28,7 @@ import System.FilePath.Posix (joinPath, takeExtension)
 import Text.Blaze.Html (Html, toHtml, preEscapedToHtml)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Web.Seacat.Configuration (ConfigParser, conf', get')
-import Web.Seacat.RequestHandler (files, param)
+import Web.Seacat.RequestHandler (files, param', hasParam)
 import Web.Seacat.RequestHandler.Types (RequestProcessor, askConf)
 
 import qualified Data.ByteString as B
@@ -124,12 +124,12 @@ makePost :: Maybe (FileInfo BL.ByteString)
            -- make it necessarily valid)
          -> RequestProcessor Sitemap APost
 makePost thefile = do
-  name     <- fromMaybe "" <$> param "name"
-  email    <- fromMaybe "" <$> param "email"
-  subject  <- fromMaybe "" <$> param "subject"
-  comment  <- fromMaybe "" <$> param "comment"
-  password <- fromMaybe "" <$> param "password"
-  spoiler  <- isJust <$> param "spoiler"
+  name     <- param' "name"     ""
+  email    <- param' "email"    ""
+  subject  <- param' "subject"  ""
+  comment  <- param' "comment"  ""
+  password <- param' "password" ""
+  spoiler  <- hasParam "spoiler"
 
   let file = case thefile of
                Just f@(FileInfo _ _ c) -> if BL.null c
