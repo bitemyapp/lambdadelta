@@ -48,7 +48,7 @@ rateLimit tag freq onLimit handler = do
     Just t -> onLimit t
     Nothing -> do
       let banUntil = addUTCTime freq now
-      _ <- insert $ RateLimit tag banUntil ip
+      _ <- insert $ SeacatRateLimit tag banUntil ip
       handler
 
 -- |Don't let someone past if they are rate limited, but don't set a
@@ -70,13 +70,13 @@ isRateLimited tag = do
 
   now <- liftIO getCurrentTime
 
-  deleteWhere [RateLimitExpires <. now]
+  deleteWhere [SeacatRateLimitExpires <. now]
 
-  ban <- selectFirst [ RateLimitApplies ==. tag
-                    , RateLimitTarget  ==. ip
+  ban <- selectFirst [ SeacatRateLimitApplies ==. tag
+                    , SeacatRateLimitTarget  ==. ip
                     ] []
 
-  return $ (\(Entity _ b) -> rateLimitExpires b) <$> ban
+  return $ (\(Entity _ b) -> seacatRateLimitExpires b) <$> ban
 
 --------------------
 
@@ -94,14 +94,14 @@ ipBan tag onBan handler = do
 
   now <- liftIO getCurrentTime
 
-  deleteWhere [IPBanExpires <. now]
+  deleteWhere [SeacatIPBanExpires <. now]
 
-  ban <- selectFirst [ IPBanApplies ==. tag
-                    , IPBanStart <=. ipToRational ip
-                    , IPBanStop >=. ipToRational ip
+  ban <- selectFirst [ SeacatIPBanApplies ==. tag
+                    , SeacatIPBanStart <=. ipToRational ip
+                    , SeacatIPBanStop >=. ipToRational ip
                     ] []
   case ban of
-    Just (Entity _ ipban) -> onBan (iPBanExpires ipban) (iPBanReason ipban)
+    Just (Entity _ ipban) -> onBan (seacatIPBanExpires ipban) (seacatIPBanReason ipban)
     Nothing -> handler
 
 -- |Convert an IP address into a Rational, the type I'm using in the
@@ -134,15 +134,15 @@ floodProtect tag time accesses onFlood handler = do
   ip <- show . remoteHost <$> askReq
   now <- liftIO getCurrentTime
 
-  deleteWhere [AntiFloodExpires <. now]
+  deleteWhere [SeacatAntiFloodExpires <. now]
 
-  flood <- ((>=accesses) . length) <$> selectList [ AntiFloodApplies ==. tag
-                                                , AntiFloodTarget  ==. ip
+  flood <- ((>=accesses) . length) <$> selectList [ SeacatAntiFloodApplies ==. tag
+                                                , SeacatAntiFloodTarget  ==. ip
                                                 ] []
 
   if flood
   then onFlood
   else do
     let expires = addUTCTime time now
-    _ <- insert $ AntiFlood tag expires ip
+    _ <- insert $ SeacatAntiFlood tag expires ip
     handler

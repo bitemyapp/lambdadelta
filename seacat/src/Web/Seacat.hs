@@ -195,9 +195,9 @@ clean _ _ _ pool settings = do
   now <- getCurrentTime
 
   runDB pool $ do
-    deleteWhere [RateLimitExpires <. now]
-    deleteWhere [IPBanExpires     <. now]
-    deleteWhere [AntiFloodExpires <. now]
+    deleteWhere [SeacatRateLimitExpires <. now]
+    deleteWhere [SeacatIPBanExpires     <. now]
+    deleteWhere [SeacatAntiFloodExpires <. now]
 
   case _clean settings of
     Just cln -> runDB pool cln

@@ -49,7 +49,7 @@ runPool = runSqlPersistMPool
 --------------------
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
-IPBan
+SeacatIPBan
     -- Name used to identify routes where the ban applies
     applies Text
     expires UTCTime
@@ -61,13 +61,13 @@ IPBan
     stop  Rational
     deriving Show
 
-RateLimit
+SeacatRateLimit
     applies Text
     expires UTCTime
     target  String
     deriving Show
 
-AntiFlood
+SeacatAntiFlood
     applies Text
     expires UTCTime
     target  String
