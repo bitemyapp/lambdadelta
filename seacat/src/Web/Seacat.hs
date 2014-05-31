@@ -8,12 +8,14 @@ module Web.Seacat ( SeacatSettings(..)
                   , defaultSettings
                   , seacat) where
 
+import Control.Arrow ((***), first)
 import Control.Monad (when, void)
 import Control.Monad.Trans.Reader (runReaderT)
 import Data.Either.Utils (forceEither)
 import Data.Maybe (fromJust)
 import Data.String (fromString)
 import Data.Text (replace)
+import Data.Text.Encoding (decodeUtf8)
 import Data.Time.Clock (getCurrentTime)
 import Database.Persist ((<.), deleteWhere)
 import Database.Persist.Sql (ConnectionPool, Migration, SqlPersistM, runMigration)
@@ -21,15 +23,16 @@ import Network.HTTP.Types.Method (StdMethod(..), parseMethod)
 import Network.Wai (Application, requestMethod)
 import Network.Wai.Handler.Warp (runSettings, setHost, setPort)
 import Network.Wai.Middleware.Static (addBase, staticPolicy)
+import Network.Wai.Parse (parseRequestBody, lbsBackEnd)
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.IO.Error (catchIOError)
 import Web.Routes.PathInfo (PathInfo)
 import Web.Routes.Wai (handleWai)
 
-import Web.Seacat.Configuration (ConfigParser, applyUserConfig, loadConfigFile, reloadConfigFile, defaults, get')
+import Web.Seacat.Configuration (ConfigParser, applyUserConfig, defaults, get', loadConfigFile, reloadConfigFile)
 import Web.Seacat.Database
-import Web.Seacat.RequestHandler.Types (Handler, MkUrl)
+import Web.Seacat.RequestHandler.Types (Cry(..), MkUrl, Handler, _req, _params, _files)
 
 import qualified Network.Wai.Handler.Warp as W
 
@@ -234,10 +237,19 @@ process :: PathInfo r
 process route on500 (conf,cfile) pool mkurl path req = requestHandler `catchIOError` runError
   where requestHandler = runHandler $ route method path
         runError err   = runHandler $ on500 (show err)
+
         runHandler h   = do
           conf' <- case cfile of
                     Just cf -> reloadConfigFile conf cf
                     Nothing -> return conf
-          runPool (runReaderT h (conf', mkurl', req)) pool
+
+          (ps, fs) <- parseRequestBody lbsBackEnd req
+          let cry = Cry { _req    = req
+                        , _params = map (decodeUtf8 *** decodeUtf8) ps
+                        , _files  = map (first decodeUtf8) fs
+                        }
+
+          runPool (runReaderT h (conf', mkurl', cry)) pool
+
         method         = forceEither . parseMethod . requestMethod $ req
         mkurl' r args  = replace "%23" "#" $ mkurl r args

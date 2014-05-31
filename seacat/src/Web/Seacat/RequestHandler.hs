@@ -3,6 +3,9 @@
 -- |Building up responses. This module provides a bunch of functions
 -- to turn some primitive value into a handler, and the child modules
 -- provide more complex handler composition.
+--
+-- In addition to response building, there are helper functions for
+-- accessing the request parameters.
 module Web.Seacat.RequestHandler ( htmlResponse
                                  , htmlResponse'
 
@@ -18,15 +21,22 @@ module Web.Seacat.RequestHandler ( htmlResponse
                                  , respond
                                  , respondFile
 
-                                 , redirect) where
+                                 , redirect
+
+                                 , param
+                                 , params
+                                 , files) where
 
 import Blaze.ByteString.Builder (Builder)
 import Blaze.ByteString.Builder.ByteString (fromByteString)
+import Control.Applicative ((<$>))
 import Control.Monad.IO.Class (liftIO)
+import Data.ByteString.Lazy (ByteString)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import Network.HTTP.Types.Status (Status, ok200, found302)
 import Network.Wai (responseBuilder, responseFile, responseLBS)
+import Network.Wai.Parse (FileInfo)
 import System.Directory (doesFileExist)
 import System.FilePath.Posix (joinPath)
 import Text.Blaze.Html (Html)
@@ -113,8 +123,28 @@ respondFile' on404 fp = do
   then return $ responseFile ok200 [] fp Nothing
   else on404
 
+-------------------------
+
 -- |Produce a response to redirect the user.
 redirect :: PathInfo r => r -> Handler r
 redirect url = do
   mkurl <- askMkUrl
   return $ responseLBS found302 [("Location", encodeUtf8 $ mkurl url [])] ""
+
+-------------------------
+
+-- |Get a parameter by name. Returns a Maybe Text, where the Text is
+-- the value of the parameter, interpreted as a UTF-8 string.
+param :: PathInfo r
+      => Text -- ^ The name of the parameter
+      -> RequestProcessor r (Maybe Text)
+param p = lookup p <$> params
+
+-- |Get all non-file parameters, with the contents interpreted as
+-- UTF-8 strings.
+params :: PathInfo r => RequestProcessor r [(Text, Text)]
+params = _params <$> askCry
+
+-- |Get all files, stored in memory as a lazy bytestring.
+files :: PathInfo r => RequestProcessor r [(Text, FileInfo ByteString)]
+files = _files <$> askCry

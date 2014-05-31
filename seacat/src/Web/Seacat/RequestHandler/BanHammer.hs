@@ -24,7 +24,7 @@ import Network.Socket (SockAddr(..))
 import Network.Wai (remoteHost)
 import Web.Routes.PathInfo (PathInfo)
 import Web.Seacat.Database
-import Web.Seacat.RequestHandler.Types (Handler, RequestProcessor, askReq)
+import Web.Seacat.RequestHandler.Types (Handler, RequestProcessor, _req, askCry)
 
 -- |A handy name to identify a route.
 type Tag = Text
@@ -42,7 +42,7 @@ rateLimit :: PathInfo r
 rateLimit tag freq onLimit handler = do
   limited <- isRateLimited tag
   now     <- liftIO getCurrentTime
-  ip      <- (show . remoteHost) <$> askReq
+  ip      <- show . remoteHost . _req <$> askCry
 
   case limited of
     Just t -> onLimit t
@@ -66,7 +66,7 @@ rateLimit' tag onLimit handler = do
 -- ends. This has the side-effect of clearing out all expired limits.
 isRateLimited :: PathInfo r => Tag -> RequestProcessor r (Maybe UTCTime)
 isRateLimited tag = do
-  ip <- (show . remoteHost) <$> askReq
+  ip <- show . remoteHost . _req <$> askCry
 
   now <- liftIO getCurrentTime
 
@@ -90,7 +90,7 @@ ipBan :: PathInfo r
       -> Handler r
       -> Handler r
 ipBan tag onBan handler = do
-  ip <- remoteHost <$> askReq
+  ip <- remoteHost . _req <$> askCry
 
   now <- liftIO getCurrentTime
 
@@ -131,7 +131,7 @@ floodProtect :: PathInfo r
              -> Handler r
              -> Handler r
 floodProtect tag time accesses onFlood handler = do
-  ip <- (show . remoteHost) <$> askReq
+  ip <- show . remoteHost . _req <$> askCry
   now <- liftIO getCurrentTime
 
   deleteWhere [AntiFloodExpires <. now]

@@ -5,11 +5,12 @@ module Web.Seacat.RequestHandler.OnMethod ( on
                                           , onGet
                                           , onPost) where
 
+import Control.Applicative ((<$>))
 import Data.Either.Utils (forceEither)
 import Network.HTTP.Types.Method (StdMethod(..), parseMethod)
 import Network.Wai (requestMethod)
 import Web.Routes.PathInfo (PathInfo)
-import Web.Seacat.RequestHandler.Types (Handler, askReq)
+import Web.Seacat.RequestHandler.Types (Handler, _req, askCry)
 
 -- |Run the provided handler on a GET request
 --
@@ -39,7 +40,7 @@ on :: PathInfo r
    -> Handler r -- ^ The handler
    -> Handler r
 on method on405 handler = do
-  req <- askReq
+  req <- _req <$> askCry
   let rmethod = forceEither . parseMethod . requestMethod $ req
   if rmethod == method
   then handler
