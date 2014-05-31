@@ -28,7 +28,7 @@ import System.FilePath.Posix (joinPath, takeExtension)
 import Text.Blaze.Html (Html, toHtml, preEscapedToHtml)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Web.Seacat.Configuration (ConfigParser, conf', get')
-import Web.Seacat.RequestHandler (files, param, params)
+import Web.Seacat.RequestHandler (files, param)
 import Web.Seacat.RequestHandler.Types (RequestProcessor, askConf)
 
 import qualified Data.ByteString as B
@@ -101,9 +101,6 @@ handlePostForm :: BoardId      -- ^ The board
 handlePostForm boardId threadId = do
   conf <- lift askConf
 
-  ps <- lift params
-  lift $ liftIO $ print ps
-
   fs   <- lift files
   post <- lift . fmap (preprocess conf) . makePost $ lookup "file" fs
 
@@ -127,8 +124,6 @@ makePost :: Maybe (FileInfo BL.ByteString)
            -- make it necessarily valid)
          -> RequestProcessor Sitemap APost
 makePost thefile = do
-  ps <- params
-  liftIO $ print ps
   name     <- fromMaybe "" <$> param "name"
   email    <- fromMaybe "" <$> param "email"
   subject  <- fromMaybe "" <$> param "subject"
