@@ -24,6 +24,8 @@ module Web.Seacat.RequestHandler ( htmlResponse
                                  , redirect
 
                                  , param
+                                 , param'
+                                 , hasParam
                                  , params
                                  , files) where
 
@@ -32,6 +34,7 @@ import Blaze.ByteString.Builder.ByteString (fromByteString)
 import Control.Applicative ((<$>))
 import Control.Monad.IO.Class (liftIO)
 import Data.ByteString.Lazy (ByteString)
+import Data.Maybe (isJust, fromMaybe)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import Network.HTTP.Types.Status (Status, ok200, found302)
@@ -139,6 +142,19 @@ param :: PathInfo r
       => Text -- ^ The name of the parameter
       -> RequestProcessor r (Maybe Text)
 param p = lookup p <$> params
+
+-- |Get a parameter with a default value.
+param' :: PathInfo r
+       => Text -- ^ The parameter name
+       -> Text -- ^ The default value
+       -> RequestProcessor r Text
+param' p d = fromMaybe d <$> lookup p <$> params
+
+-- |Check if a parameter is set
+hasParam :: PathInfo r
+         => Text -- ^ The parameter name
+         -> RequestProcessor r Bool
+hasParam p = isJust <$> lookup p <$> params
 
 -- |Get all non-file parameters, with the contents interpreted as
 -- UTF-8 strings.
