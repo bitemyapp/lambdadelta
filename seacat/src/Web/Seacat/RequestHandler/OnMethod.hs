@@ -10,7 +10,7 @@ import Data.Either.Utils (forceEither)
 import Network.HTTP.Types.Method (StdMethod(..), parseMethod)
 import Network.Wai (requestMethod)
 import Web.Routes.PathInfo (PathInfo)
-import Web.Seacat.RequestHandler.Types (Handler, _req, askCry)
+import Web.Seacat.RequestHandler.Types (Handler, askReq)
 
 -- |Run the provided handler on a GET request
 --
@@ -40,8 +40,8 @@ on :: PathInfo r
    -> Handler r -- ^ The handler
    -> Handler r
 on method on405 handler = do
-  req <- _req <$> askCry
-  let rmethod = forceEither . parseMethod . requestMethod $ req
+  rmethod <- forceEither . parseMethod . requestMethod <$> askReq
+
   if rmethod == method
   then handler
   else on405

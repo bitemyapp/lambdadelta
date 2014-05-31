@@ -16,20 +16,20 @@ import Data.Char (chr)
 import Data.Hash.MD5 (Str(..), md5s)
 import Data.Maybe (isJust, fromJust, fromMaybe)
 import Data.Text (Text, null, pack, splitOn, strip, unpack)
-import Data.Text.Encoding (decodeUtf8)
 import Data.Text.Lazy (toStrict)
 import Data.Time.Clock (getCurrentTime)
 import Database
 import Database.Persist
 import Graphics.ImageMagick.MagickWand
 import Handler.Admin (bump, deleteThread)
-import Network.Wai.Parse (FileInfo(..), Param, lbsBackEnd, parseRequestBody)
+import Network.Wai.Parse (FileInfo(..))
 import Routes (Sitemap)
 import System.FilePath.Posix (joinPath, takeExtension)
 import Text.Blaze.Html (Html, toHtml, preEscapedToHtml)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Web.Seacat.Configuration (ConfigParser, conf', get')
-import Web.Seacat.RequestHandler.Types (RequestProcessor, askConf, askReq)
+import Web.Seacat.RequestHandler (files, param, params)
+import Web.Seacat.RequestHandler.Types (RequestProcessor, askConf)
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
@@ -99,12 +99,13 @@ handlePostForm :: BoardId      -- ^ The board
                -> Maybe PostId -- ^ The OP
                -> ErrorT String (RequestProcessor Sitemap) (Target, Maybe FileId, Int)
 handlePostForm boardId threadId = do
-  request <- lift askReq
-  conf    <- lift askConf
+  conf <- lift askConf
 
-  (params, files) <- liftIO $ parseRequestBody lbsBackEnd request
+  ps <- lift params
+  lift $ liftIO $ print ps
 
-  post <- lift . fmap (preprocess conf) . makePost params $ lookup "file" files
+  fs   <- lift files
+  post <- lift . fmap (preprocess conf) . makePost $ lookup "file" fs
 
   -- If this is a new thread, there must be both an image and a comment.
   -- If this is a reply, there must be at least one of an image or a comment.
@@ -121,19 +122,19 @@ handlePostForm boardId threadId = do
   lift $ commitPost boardId threadId post
 
 -- |Extract a post from the POST!
-makePost :: [Param]                        -- ^ The parameters
-         -> Maybe (FileInfo BL.ByteString) -- ^ The possible file
-                                          -- (careful: being a Just here
-                                          -- doesn't make it necessarily
-                                          -- valid)
+makePost :: Maybe (FileInfo BL.ByteString)
+           -- ^ The possible file (careful: being a Just here doesn't
+           -- make it necessarily valid)
          -> RequestProcessor Sitemap APost
-makePost params thefile = do
-  let name     = fromMaybe "" $ decodeUtf8 <$> lookup "name"     params
-  let email    = fromMaybe "" $ decodeUtf8 <$> lookup "email"    params
-  let subject  = fromMaybe "" $ decodeUtf8 <$> lookup "subject"  params
-  let comment  = fromMaybe "" $ decodeUtf8 <$> lookup "comment"  params
-  let password = fromMaybe "" $ decodeUtf8 <$> lookup "password" params
-  let spoiler  = isJust $ lookup "spoiler" params
+makePost thefile = do
+  ps <- params
+  liftIO $ print ps
+  name     <- fromMaybe "" <$> param "name"
+  email    <- fromMaybe "" <$> param "email"
+  subject  <- fromMaybe "" <$> param "subject"
+  comment  <- fromMaybe "" <$> param "comment"
+  password <- fromMaybe "" <$> param "password"
+  spoiler  <- isJust <$> param "spoiler"
 
   let file = case thefile of
                Just f@(FileInfo _ _ c) -> if BL.null c

@@ -1,6 +1,7 @@
 -- |Types used by request handlers.
 module Web.Seacat.RequestHandler.Types where
 
+import Control.Applicative((<$>))
 import Control.Monad.Trans.Reader (ReaderT, asks)
 import Data.ByteString.Lazy.Char8 (ByteString)
 import Data.ConfigFile (ConfigParser)
@@ -47,3 +48,7 @@ askMkUrl = asks $ \(_, mkurl, _) -> mkurl
 -- |Get the seacat request from a `RequestProcessor`
 askCry :: PathInfo r => RequestProcessor r Cry
 askCry = asks $ \(_, _, req) -> req
+
+-- |Get the WAI request from a `RequestProcessor`
+askReq :: PathInfo r => RequestProcessor r Request
+askReq = _req <$> askCry
