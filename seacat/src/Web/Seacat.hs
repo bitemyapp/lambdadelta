@@ -235,21 +235,33 @@ process :: PathInfo r
         -> r                           -- ^ Requested route
         -> Application
 process route on500 (conf,cfile) pool mkurl path req = requestHandler `catchIOError` runError
-  where requestHandler = runHandler $ route method path
-        runError err   = runHandler $ on500 (show err)
-
-        runHandler h   = do
-          conf' <- case cfile of
-                    Just cf -> reloadConfigFile conf cf
-                    Nothing -> return conf
-
-          (ps, fs) <- parseRequestBody lbsBackEnd req
-          let cry = Cry { _req    = req
-                        , _params = map (decodeUtf8 *** decodeUtf8) ps
-                        , _files  = map (first decodeUtf8) fs
-                        }
-
-          runPool (runReaderT h (conf', mkurl', cry)) pool
-
+  where requestHandler = runHandler' $ route method path
+        runError err   = runHandler' $ on500 (show err)
+        runHandler' h  = runHandler h conf cfile pool mkurl req
         method         = forceEither . parseMethod . requestMethod $ req
-        mkurl' r args  = replace "%23" "#" $ mkurl r args
+
+-- |Run a request handler.
+runHandler :: PathInfo r
+           => Handler r -- ^ The handler to run
+           -> ConfigParser
+           -> Maybe FilePath
+           -> ConnectionPool
+           -> MkUrl r
+           -> Application
+runHandler h conf cfile pool mkurl req = do
+  -- Reload the config
+  conf' <- case cfile of
+            Just cf -> reloadConfigFile conf cf
+            Nothing -> return conf
+
+  -- Build the Cry
+  (ps, fs) <- parseRequestBody lbsBackEnd req
+  let cry = Cry { _req    = req
+                , _params = map (decodeUtf8 *** decodeUtf8) ps
+                , _files  = map (first decodeUtf8) fs
+                }
+
+  runPool (runReaderT h (conf', mkurl', cry)) pool
+
+  where mkurl' r args = replace "%23" "#" $ mkurl r args
+  -- ^ This is horrific, come up with a better way of doing it
