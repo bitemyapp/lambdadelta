@@ -3,17 +3,17 @@
 -- |Building up responses. This module provides a bunch of functions
 -- to turn some primitive value into a handler, and the child modules
 -- provide more complex handler composition.
-module Web.Seacat.RequestHandler ( html200Response
-                                 , html404Response
-                                 , htmlResponse
+module Web.Seacat.RequestHandler ( htmlResponse
+                                 , htmlResponse'
 
-                                 , utf8200Response
-                                 , utf8404Response
-                                 , utf8Response
+                                 , htmlUrlResponse
+                                 , htmlUrlResponse'
 
-                                 , bs200Response
-                                 , bs404Response
-                                 , bsResponse
+                                 , textResponse
+                                 , textResponse'
+
+                                 , textUrlResponse
+                                 , textUrlResponse'
 
                                  , respond
                                  , respondFile
@@ -23,71 +23,68 @@ module Web.Seacat.RequestHandler ( html200Response
 import Blaze.ByteString.Builder (Builder)
 import Blaze.ByteString.Builder.ByteString (fromByteString)
 import Control.Monad.IO.Class (liftIO)
-import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
-import Network.HTTP.Types.Status
+import Network.HTTP.Types.Status (Status, ok200, found302)
 import Network.Wai (responseBuilder, responseFile, responseLBS)
 import System.Directory (doesFileExist)
 import System.FilePath.Posix (joinPath)
+import Text.Blaze.Html (Html)
 import Text.Blaze.Html.Renderer.Utf8 (renderHtmlBuilder)
-import Text.Hamlet (HtmlUrl)
 import Web.Routes.PathInfo (PathInfo)
 import Web.Seacat.Configuration (conf')
 import Web.Seacat.RequestHandler.Types
 
 -- |Produce a 200 OK response from the given HTML. This calls
--- `htmlResponse`.
-html200Response :: PathInfo r => HtmlUrl r -> Handler r
-html200Response = htmlResponse ok200
-
--- |Produce a 404 File Not Found response form the given HTML. This
--- calls `htmlResponse`.
-html404Response :: PathInfo r => HtmlUrl r -> Handler r
-html404Response = htmlResponse notFound404
+-- `htmlResponse'`.
+htmlResponse :: PathInfo r => Html -> Handler r
+htmlResponse = htmlResponse' ok200
 
 -- |Produce a response from the given HTML and response code. This
 -- calls `respond`.
---
--- Todo: Do the second parameter of mkurl properly (get params)
-htmlResponse :: PathInfo r => Status -> HtmlUrl r -> Handler r
-htmlResponse status html = do mkurl <- askMkUrl
-                              let builder = renderHtmlBuilder . html $ \a _ -> mkurl a []
-                              respond status builder
+htmlResponse' :: PathInfo r => Status -> Html -> Handler r
+htmlResponse' status html = respond status $ renderHtmlBuilder html
+
+-------------------------
+
+-- |Produce a 200 OK response from the given HTML-generating
+-- function. This calls `htmlUrlResponse'`.
+htmlUrlResponse :: PathInfo r => (MkUrl r -> Html) -> Handler r
+htmlUrlResponse = htmlUrlResponse' ok200
+
+-- |Produce a response from the given HTML-generating function and
+-- response code. This calls `respond`.
+htmlUrlResponse' :: PathInfo r => Status -> (MkUrl r -> Html) -> Handler r
+htmlUrlResponse' status html = do
+  mkurl <- askMkUrl
+  let builder = renderHtmlBuilder $ html mkurl
+  respond status builder
 
 -------------------------
 
 -- |Produce a 200 OK response from the given UTF-8 text. This calls
--- `utf8Response`.
-utf8200Response :: PathInfo r => Text -> Handler r
-utf8200Response = utf8Response ok200
-
--- |Produce a 404 File Not Found response from the given UTF-8
--- text. This calls `utf8Response`.
-utf8404Response :: PathInfo r => Text -> Handler r
-utf8404Response = utf8Response notFound404
+-- `textResponse'`.
+textResponse :: PathInfo r => Text -> Handler r
+textResponse = textResponse' ok200
 
 -- |Produce a response from the given UTF-8 text and response
 -- code. This calls `respond`.
-utf8Response :: PathInfo r => Status -> Text -> Handler r
-utf8Response status = respond status . fromByteString . encodeUtf8
+textResponse' :: PathInfo r => Status -> Text -> Handler r
+textResponse' status = respond status . fromByteString . encodeUtf8
 
 -------------------------
 
--- |Produce a 200 OK response from the given ByteString. This calls
--- `bsResponse`.
-bs200Response :: PathInfo r => ByteString -> Handler r
-bs200Response = bsResponse ok200
+-- |Produce a 200 OK response from the given UTF-8 text-generating
+-- function. This calls `textUrlResponse'`.
+textUrlResponse :: PathInfo r => (MkUrl r -> Text) -> Handler r
+textUrlResponse = textUrlResponse' ok200
 
--- |Produce a 404 File Not Found response from the given
--- ByteString. This calls `bsResponse`.
-bs404Response :: PathInfo r => ByteString -> Handler r
-bs404Response = bsResponse notFound404
-
--- |Produce a response from the given ByteString and response
--- code. This calls `respond`.
-bsResponse :: PathInfo r => Status -> ByteString -> Handler r
-bsResponse status = respond status . fromByteString
+-- |Produce a response from the given UTF-8 text-generating function
+-- and response code. This calls `respond`.
+textUrlResponse' :: PathInfo r => Status -> (MkUrl r -> Text) -> Handler r
+textUrlResponse' status text = do
+  mkurl <- askMkUrl
+  respond status . fromByteString . encodeUtf8 $ text mkurl
 
 -------------------------
 

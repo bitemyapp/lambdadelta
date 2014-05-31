@@ -2,6 +2,7 @@
 
 module Handler.User (index, board, thread, Handler.User.postThread, postReply) where
 
+import Control.Arrow (second)
 import Control.Monad.Trans.Error (ErrorT, runErrorT)
 import Data.Text (Text)
 import Database
@@ -9,7 +10,9 @@ import Database.Persist
 import Handler.Board (listing, numPages, getThread)
 import Handler.Error (error400, error404)
 import Handler.Post (Target(..), newThread, newReply)
+import Network.HTTP.Types.Status (ok200)
 import Routes (Sitemap)
+import Text.Hamlet (HtmlUrl)
 import Web.Seacat.Configuration (conf')
 import Web.Seacat.RequestHandler
 import Web.Seacat.RequestHandler.Types
@@ -20,7 +23,12 @@ import qualified Routes as R
 -- |Render the index page
 -- Todo: Recent images/posts
 index :: Handler Sitemap
-index = listing >>= html200Response . T.index
+index = do
+  lst <- listing
+
+  mkurl <- askMkUrl
+  htmlResponse $ T.index lst $ \a b ->
+    mkurl a $ map (second Just) b
 
 -- |Render a board index page
 -- Todo: Board-specific config
@@ -37,14 +45,20 @@ board board page = withBoard board $ \(Entity boardId board') -> do
                        , OffsetBy $ (page - 1) * threads_per_page]
   pages    <- numPages boardId
   threads' <- mapM (getThread summary_size) threads
-  html200Response $ T.board board' boardlisting page pages threads'
+
+  mkurl <- askMkUrl
+  htmlResponse $ T.board board' boardlisting page pages threads' $ \a b ->
+    mkurl a $ map (second Just) b
 
 thread :: Text -> Int -> Handler Sitemap
 thread board thread = withBoard board $ \(Entity boardId board') ->
   withThread boardId thread $ \thread' -> do
     boardlisting <- listing
     thread'' <- getThread (-1) thread'
-    html200Response $ T.thread board' boardlisting thread''
+
+    mkurl <- askMkUrl
+    htmlResponse $ T.thread board' boardlisting thread'' $ \a b ->
+      mkurl a $ map (second Just) b
 
 -- |Handle a request to post a new thread
 -- Todo: anti-spam

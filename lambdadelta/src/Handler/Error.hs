@@ -1,16 +1,19 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Handler.Error ( error400
                      , error404
                      , error405
                      , error500) where
 
+import Control.Arrow (second)
 import Network.HTTP.Types.Status ( Status
                                  , badRequest400
                                  , notFound404
                                  , methodNotAllowed405
                                  , internalServerError500)
 import Routes (Sitemap)
-import Web.Seacat.RequestHandler (htmlResponse)
-import Web.Seacat.RequestHandler.Types (Handler)
+import Web.Seacat.RequestHandler (htmlResponse')
+import Web.Seacat.RequestHandler.Types (Handler, askMkUrl)
 
 import qualified Handler.Templates as T (error)
 
@@ -40,4 +43,7 @@ error500 = Handler.Error.error internalServerError500
 error :: Status  -- ^ The response code
       -> String  -- ^ A description of the error
       -> Handler Sitemap
-error status description = htmlResponse status $ T.error status description
+error status description = do
+  mkurl <- askMkUrl
+  htmlResponse' status $ T.error status description $ \a b ->
+    mkurl a $ map (second Just) b
