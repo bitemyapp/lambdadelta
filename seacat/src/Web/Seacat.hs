@@ -22,6 +22,7 @@ import Database.Persist.Sql (ConnectionPool, Migration, SqlPersistM, runMigratio
 import Network.HTTP.Types.Method (StdMethod(..), parseMethod)
 import Network.Wai (Application, requestMethod)
 import Network.Wai.Handler.Warp (runSettings, setHost, setPort)
+import Network.Wai.Middleware.Gzip (GzipSettings(..), GzipFiles(GzipCompress), gzip, gzipFiles, def)
 import Network.Wai.Middleware.Static (addBase, staticPolicy)
 import Network.Wai.Parse (parseRequestBody, lbsBackEnd)
 import System.Environment (getArgs)
@@ -60,6 +61,10 @@ data SeacatSettings = SeacatSettings
 
     , _clean :: Maybe (SqlPersistM ())
       -- ^ Database clean handler. This is optional.
+
+    , _gzip :: GzipSettings
+      -- ^ The settings to use for Gzip compression. Default is to
+      -- compress if allowed.
     }
 
 -- |Default configuration: no application-specific configuration, no
@@ -69,6 +74,7 @@ defaultSettings = SeacatSettings { _config   = Nothing
                                  , _migrate  = Nothing
                                  , _populate = Nothing
                                  , _clean    = Nothing
+                                 , _gzip     = def { gzipFiles = GzipCompress }
                                  }
 
 -- |Launch the Seacat web server. Seacat takes two bits of mandatory
@@ -144,10 +150,10 @@ runserver route on500 cfile pool settings = do
 
   void $ clean route on500 cfile pool settings
 
-  let settings = setHost (fromString host) . setPort port $ W.defaultSettings
+  let settings' = setHost (fromString host) . setPort port $ W.defaultSettings
 
   putStrLn $ "Starting Seacat on " ++ host ++ ":" ++ show port
-  pool $ runSettings settings . runner route on500 (conf,cfile)
+  pool $ runSettings settings' . runner settings route on500 (conf,cfile)
 
 -- |Migrate the database
 migrate :: PathInfo r
@@ -212,13 +218,15 @@ badcommand _ _ _ _ _ = die "Unknown command"
 -- |runner is the actual WAI application. It takes a request, handles
 -- it, and produces a response.
 runner :: PathInfo r
-       => (StdMethod -> r -> Handler r)    -- ^ Routing function
+       => SeacatSettings -- ^ The settings
+       -> (StdMethod -> r -> Handler r)    -- ^ Routing function
        -> (String -> Handler r)           -- ^ Top-level error handling function
        -> (ConfigParser, Maybe FilePath) -- ^ The configuration
        -> ConnectionPool                 -- ^ Database connection reference
        -> Application
-runner route on500 c@(conf,_) pool = handleWai (fromString webroot) $ \mkurl r ->
+runner settings route on500 c@(conf,_) pool = handleWai (fromString webroot) $ \mkurl r ->
   staticPolicy (addBase fileroot) $
+  gzip (_gzip settings) $
   process route on500 c pool mkurl r
 
   where webroot  = get' conf "server" "web_root"
