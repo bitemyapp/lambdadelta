@@ -12,7 +12,7 @@ import Network.HTTP.Types.Status ( Status
                                  , methodNotAllowed405
                                  , internalServerError500)
 import Routes (Sitemap)
-import Web.Seacat
+import Web.Seacat (Handler, askMkUrl)
 import Web.Seacat.RequestHandler (htmlResponse')
 import qualified Handler.Templates as T (error)
 

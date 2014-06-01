@@ -9,8 +9,7 @@ import Database
 import Database.Persist
 import Handler.Templates (TThread(..))
 import Routes (Sitemap)
-import Web.Seacat
-import Web.Seacat.Configuration (conf')
+import Web.Seacat (RequestProcessor, conf')
 
 import qualified Database as D
 

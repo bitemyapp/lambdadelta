@@ -7,12 +7,12 @@ module Web.Seacat
     ( -- * Types from dependencies, re-exported for convenience.
       FileInfo(..)
     , PathInfo(..)
+    , ConfigParser(..)
 
     -- * Running the server
     , SeacatSettings(..)
     , defaultSettings
     , seacat
-
 
     -- * Request handler types
     , Cry(..)
@@ -25,7 +25,14 @@ module Web.Seacat
     , askConf
     , askMkUrl
     , askReq
+
+    -- * Configuration accessors
+    , get
+    , get'
+    , conf
+    , conf'
     ) where
 
+import Web.Seacat.Configuration
 import Web.Seacat.Server
 import Web.Seacat.RequestHandler.Types

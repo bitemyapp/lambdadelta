@@ -3,7 +3,7 @@
 module Main where
 
 import Control.Monad (void)
-import Data.ConfigFile (ConfigParser, emptyCP, readstring)
+import Data.ConfigFile (emptyCP, readstring)
 import Data.Either.Utils (forceEither)
 import Database (migrateAll)
 import Database.Persist (insert)

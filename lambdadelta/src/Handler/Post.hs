@@ -14,7 +14,7 @@ import Control.Monad.Trans.Error (ErrorT, throwError)
 import Data.ByteString (concat)
 import Data.Char (chr)
 import Data.Hash.MD5 (Str(..), md5s)
-import Data.Maybe (isJust, fromJust, fromMaybe)
+import Data.Maybe (isJust, fromJust)
 import Data.Text (Text, null, pack, splitOn, strip, unpack)
 import Data.Text.Lazy (toStrict)
 import Data.Time.Clock (getCurrentTime)
@@ -26,8 +26,7 @@ import Routes (Sitemap)
 import System.FilePath.Posix (joinPath, takeExtension)
 import Text.Blaze.Html (Html, toHtml, preEscapedToHtml)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
-import Web.Seacat
-import Web.Seacat.Configuration (ConfigParser, conf', get')
+import Web.Seacat (ConfigParser, FileInfo(..), RequestProcessor, askConf, conf', get')
 import Web.Seacat.RequestHandler (files, param', hasParam)
 
 import qualified Data.ByteString as B
@@ -148,7 +147,7 @@ commitPost boardId threadId post = do
   fileId <- case _file post of
              Just f -> Just <$> handleFileUpload board f (_spoiler post)
              _ -> return Nothing
-  (postId, postNumber) <- handleNewPost boardId threadId post fileId
+  (_, postNumber) <- handleNewPost boardId threadId post fileId
 
   -- bump the thread if there is a thread to bump
   when (_bump post)$ return () `maybe` bump $ threadId
