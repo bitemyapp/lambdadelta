@@ -5,11 +5,11 @@ module Web.Seacat.Server ( SeacatSettings(..)
                          , defaultSettings
                          , seacat) where
 
-import Control.Arrow ((***), first)
+import Control.Arrow ((***), first, second)
 import Control.Monad (when, void)
 import Control.Monad.Trans.Reader (runReaderT)
 import Data.Either.Utils (forceEither)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.String (fromString)
 import Data.Text (replace)
 import Data.Text.Encoding (decodeUtf8)
@@ -17,7 +17,7 @@ import Data.Time.Clock (getCurrentTime)
 import Database.Persist ((<.), deleteWhere)
 import Database.Persist.Sql (ConnectionPool, Migration, SqlPersistM, runMigration)
 import Network.HTTP.Types.Method (StdMethod(..), parseMethod)
-import Network.Wai (Application, requestMethod)
+import Network.Wai (Application, requestMethod, queryString)
 import Network.Wai.Handler.Warp (runSettings, setHost, setPort)
 import Network.Wai.Middleware.Gzip (GzipSettings(..), GzipFiles(GzipCompress), gzip, gzipFiles, def)
 import Network.Wai.Middleware.Static (addBase, staticPolicy)
@@ -261,8 +261,9 @@ runHandler h conf cfile pool mkurl req = do
 
   -- Build the Cry
   (ps, fs) <- parseRequestBody lbsBackEnd req
+  let ps' = map (second $ fromMaybe "") $ queryString req
   let cry = Cry { _req    = req
-                , _params = map (decodeUtf8 *** decodeUtf8) ps
+                , _params = map (decodeUtf8 *** decodeUtf8) (ps ++ ps')
                 , _files  = map (first decodeUtf8) fs
                 , _conf   = conf'
                 , _mkurl  = mkurl'
