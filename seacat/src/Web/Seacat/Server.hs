@@ -271,4 +271,4 @@ runHandler h conf cfile pool mkurl req = do
   runPool (runReaderT h cry) pool
 
   where mkurl' r args = replace "%23" "#" $ mkurl r args
-  -- ^ This is horrific, come up with a better way of doing it
+  -- This is horrific, come up with a better way of doing it
