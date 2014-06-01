@@ -53,7 +53,7 @@ loadConfigFileUnsafe filename = do
 reloadConfigFile :: ConfigParser    -- ^ The original configuration
                  -> FilePath        -- ^ The config file to load
                  -> IO ConfigParser -- ^ The new configuration
-reloadConfigFile cfg filename = ((`merge` cfg) <$> loadConfigFileUnsafe filename) `catchIOError` const (return cfg)
+reloadConfigFile cfg filename = ((cfg `merge`) <$> loadConfigFileUnsafe filename) `catchIOError` const (return cfg)
 
 -- |Default configuration values:
 --
@@ -79,7 +79,7 @@ defaults = forceEither . readstring emptyCP $ unlines
 applyUserConfig :: ConfigParser       -- ^ The standard configuration
                 -> Maybe ConfigParser -- ^ Optional application-specific configuration
                 -> ConfigParser
-applyUserConfig cfg (Just usercfg) = usercfg `merge` cfg
+applyUserConfig cfg (Just usercfg) = cfg `merge` usercfg
 applyUserConfig cfg _ = cfg
 
 -- |Get a value from the configuration unsafely (throws an

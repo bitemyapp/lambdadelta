@@ -99,13 +99,14 @@ seacat route on500 settings = do
              Nothing -> return $ Just defaults
 
   case config of
-    Just conf -> let backend  = get' conf "database" "backend"
-                     connstr  = get' conf "database" "connection_string" 
-                     poolsize = get' conf "database" "pool_size"
+    Just conf -> let conf' = applyUserConfig conf (_config settings)
+                     backend  = get' conf' "database" "backend"
+                     connstr  = get' conf' "database" "connection_string" 
+                     poolsize = get' conf' "database" "pool_size"
 
                      pool = withPool (fromString backend) (fromString connstr) poolsize
 
-                     settings' = settings { _config = Just $ applyUserConfig conf (_config settings) }
+                     settings' = settings { _config = Just conf' }
                  in run command route on500 confFile pool settings'
     Nothing   -> die "Failed to read configuration"
 
