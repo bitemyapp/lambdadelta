@@ -7,8 +7,7 @@ import Routes (Sitemap)
 import System.Directory (getDirectoryContents)
 import System.FilePath.Posix (joinPath)
 import System.Random (randomRIO)
-import Web.Seacat (Handler, conf')
-import Web.Seacat.RequestHandler (respondFile)
+import Web.Seacat (Handler, conf', respondFile)
 
 -- |Process a request for a static file
 -- This isn't the best way to serve static files, your actual web

@@ -31,8 +31,24 @@ module Web.Seacat
     , get'
     , conf
     , conf'
+
+    -- * Response builders
+    , htmlResponse
+    , htmlResponse'
+    , textResponse
+    , textResponse'
+    , respondFile
+    , redirect
+
+    -- * Parameter accessors
+    , param
+    , param'
+    , hasParam
+    , params
+    , files
     ) where
 
 import Web.Seacat.Configuration
 import Web.Seacat.Server
+import Web.Seacat.RequestHandler
 import Web.Seacat.RequestHandler.Types

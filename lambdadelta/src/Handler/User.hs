@@ -13,8 +13,7 @@ import Handler.Post (Target(..), newThread, newReply)
 import Network.HTTP.Types.Status (ok200)
 import Routes (Sitemap)
 import Text.Hamlet (HtmlUrl)
-import Web.Seacat (Handler, RequestProcessor, askMkUrl, conf')
-import Web.Seacat.RequestHandler
+import Web.Seacat (Handler, RequestProcessor, askMkUrl, conf', htmlResponse, redirect)
 
 import qualified Handler.Templates as T
 import qualified Routes as R
