@@ -13,9 +13,9 @@ import Handler.Post (Target(..), newThread, newReply)
 import Network.HTTP.Types.Status (ok200)
 import Routes (Sitemap)
 import Text.Hamlet (HtmlUrl)
+import Web.Seacat
 import Web.Seacat.Configuration (conf')
 import Web.Seacat.RequestHandler
-import Web.Seacat.RequestHandler.Types
 
 import qualified Handler.Templates as T
 import qualified Routes as R

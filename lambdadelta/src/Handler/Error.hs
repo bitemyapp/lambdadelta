@@ -12,9 +12,8 @@ import Network.HTTP.Types.Status ( Status
                                  , methodNotAllowed405
                                  , internalServerError500)
 import Routes (Sitemap)
+import Web.Seacat
 import Web.Seacat.RequestHandler (htmlResponse')
-import Web.Seacat.RequestHandler.Types (Handler, askMkUrl)
-
 import qualified Handler.Templates as T (error)
 
 -- |Send a 400 error

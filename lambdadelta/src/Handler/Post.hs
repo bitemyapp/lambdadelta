@@ -26,9 +26,9 @@ import Routes (Sitemap)
 import System.FilePath.Posix (joinPath, takeExtension)
 import Text.Blaze.Html (Html, toHtml, preEscapedToHtml)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
+import Web.Seacat
 import Web.Seacat.Configuration (ConfigParser, conf', get')
 import Web.Seacat.RequestHandler (files, param', hasParam)
-import Web.Seacat.RequestHandler.Types (FileInfo(..), RequestProcessor, askConf)
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL

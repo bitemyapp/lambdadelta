@@ -14,8 +14,8 @@ import Routes (Sitemap)
 import System.Directory (removeFile)
 import System.FilePath.Posix (joinPath)
 import System.IO.Error (catchIOError)
+import Web.Seacat
 import Web.Seacat.Configuration (conf')
-import Web.Seacat.RequestHandler.Types (RequestProcessor)
 
 -- |Bump a thread if it's below the bump limit
 bump :: PostId -- ^ The OP

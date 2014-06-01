@@ -15,7 +15,6 @@ import Network.HTTP.Types.Method (StdMethod(..))
 import Routes (Sitemap(..))
 import Web.Seacat
 import Web.Seacat.RequestHandler.OnMethod (onPost)
-import Web.Seacat.RequestHandler.Types (Handler)
 
 import qualified Database as D
 

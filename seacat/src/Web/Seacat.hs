@@ -4,10 +4,28 @@
 -- re-exports many common functions and types from the rest of the
 -- library, and submodules of this comprise all Seacat functionality.
 module Web.Seacat
-    ( -- * Running the server
-      SeacatSettings(..)
+    ( -- * Types from dependencies, re-exported for convenience.
+      FileInfo(..)
+    , PathInfo(..)
+
+    -- * Running the server
+    , SeacatSettings(..)
     , defaultSettings
     , seacat
+
+
+    -- * Request handler types
+    , Cry(..)
+    , MkUrl
+    , RequestProcessor
+    , Handler
+
+    -- * Request handler utilities
+    , askCry
+    , askConf
+    , askMkUrl
+    , askReq
     ) where
 
 import Web.Seacat.Server
+import Web.Seacat.RequestHandler.Types
