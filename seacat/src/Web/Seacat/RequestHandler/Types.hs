@@ -1,5 +1,9 @@
 -- |Types used by request handlers.
-module Web.Seacat.RequestHandler.Types where
+module Web.Seacat.RequestHandler.Types
+    ( FileInfo(..)
+    , PathInfo(..)
+    , module Web.Seacat.RequestHandler.Types
+    ) where
 
 import Control.Applicative((<$>))
 import Control.Monad.Trans.Reader (ReaderT, ask)
@@ -8,8 +12,8 @@ import Data.ConfigFile (ConfigParser)
 import Data.Text (Text)
 import Database.Persist.Sql (SqlPersistM)
 import Network.Wai (Request, Response)
-import Network.Wai.Parse (FileInfo)
-import Web.Routes.PathInfo (PathInfo)
+import Network.Wai.Parse (FileInfo(..))
+import Web.Routes.PathInfo (PathInfo(..))
 
 -- |Type to represent a Seacat request
 data Cry r = Cry

@@ -39,12 +39,10 @@ import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import Network.HTTP.Types.Status (Status, ok200, found302)
 import Network.Wai (responseBuilder, responseFile, responseLBS)
-import Network.Wai.Parse (FileInfo)
 import System.Directory (doesFileExist)
 import System.FilePath.Posix (joinPath)
 import Text.Blaze.Html (Html)
 import Text.Blaze.Html.Renderer.Utf8 (renderHtmlBuilder)
-import Web.Routes.PathInfo (PathInfo)
 import Web.Seacat.Configuration (conf')
 import Web.Seacat.RequestHandler.Types
 

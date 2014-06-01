@@ -86,7 +86,6 @@ executable lambdadelta
                      , text >=1.1 && <1.2
                      , time >=1.4 && <1.5
                      , transformers >=0.3 && <0.4
-                     , wai-extra >=2.1 && <2.2
                      , web-routes >=0.27 && <0.28
 
   -- Directories containing source files.

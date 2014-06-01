@@ -22,14 +22,13 @@ import Database
 import Database.Persist
 import Graphics.ImageMagick.MagickWand
 import Handler.Admin (bump, deleteThread)
-import Network.Wai.Parse (FileInfo(..))
 import Routes (Sitemap)
 import System.FilePath.Posix (joinPath, takeExtension)
 import Text.Blaze.Html (Html, toHtml, preEscapedToHtml)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Web.Seacat.Configuration (ConfigParser, conf', get')
 import Web.Seacat.RequestHandler (files, param', hasParam)
-import Web.Seacat.RequestHandler.Types (RequestProcessor, askConf)
+import Web.Seacat.RequestHandler.Types (FileInfo(..), RequestProcessor, askConf)
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL

@@ -4,7 +4,8 @@ module Routes where
 
 import Data.Text (Text, unpack, pack)
 import Text.Read (readMaybe)
-import Web.Routes.PathInfo
+import Web.Seacat.RequestHandler.Types (PathInfo(..))
+import Web.Routes (patternParse)
 
 -- |The possible routes on the imageboard
 -- Todo: Stylesheet takes the name of the stylesheet as a parameter
