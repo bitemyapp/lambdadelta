@@ -56,11 +56,11 @@ library
                      , Web.Seacat.RequestHandler
                      , Web.Seacat.RequestHandler.BanHammer
                      , Web.Seacat.RequestHandler.OnMethod
-                     , Web.Seacat.RequestHandler.Types
   
   -- Modules included in this library but not exported.
   other-modules:       Web.Seacat.Database
                      , Web.Seacat.Server
+                     , Web.Seacat.RequestHandler.Types
   
   ghc-options: -Wall  
 
