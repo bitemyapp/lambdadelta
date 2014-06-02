@@ -35,9 +35,10 @@ import Control.Applicative ((<$>))
 import Control.Monad.IO.Class (liftIO)
 import Data.ByteString.Lazy (ByteString)
 import Data.Maybe (isJust, fromMaybe)
-import Data.Text (Text)
+import Data.Text (Text, pack)
 import Data.Text.Encoding (encodeUtf8)
 import Network.HTTP.Types.Status (Status, ok200, found302)
+import Network.Mime (defaultMimeLookup)
 import Network.Wai (responseBuilder, responseFile, responseLBS)
 import System.Directory (doesFileExist)
 import System.FilePath.Posix (joinPath)
@@ -101,7 +102,7 @@ textUrlResponse' status text = do
 
 -- |Produce a response from the given status and ByteString builder.
 respond :: PathInfo r => Status -> Builder -> Handler r
-respond status = return . responseBuilder status []
+respond status = return . responseBuilder status [("Content-Type", "text/html; charset=utf-8")]
 
 -- |Produce a response from the given file path (minus file
 -- root). Call the provided 404 handler if the file isn't found.
@@ -121,7 +122,7 @@ respondFile' :: PathInfo r => Handler r -> FilePath -> Handler r
 respondFile' on404 fp = do
   exists <- liftIO $ doesFileExist fp
   if exists
-  then return $ responseFile ok200 [] fp Nothing
+  then return $ responseFile ok200 [("Content-Type", defaultMimeLookup $ pack fp)] fp Nothing
   else on404
 
 -------------------------
