@@ -5,14 +5,14 @@ module Handler.Error ( error400
                      , error405
                      , error500) where
 
-import Control.Arrow (second)
 import Network.HTTP.Types.Status ( Status
                                  , badRequest400
                                  , notFound404
                                  , methodNotAllowed405
                                  , internalServerError500)
 import Routes (Sitemap)
-import Web.Seacat (Handler, askMkUrl, htmlResponse')
+import Web.Seacat (Handler)
+import Web.Seacat.RequestHandler (htmlUrlResponse')
 import qualified Handler.Templates as T (error)
 
 -- |Send a 400 error
@@ -42,6 +42,4 @@ error :: Status  -- ^ The response code
       -> String  -- ^ A description of the error
       -> Handler Sitemap
 error status description = do
-  mkurl <- askMkUrl
-  htmlResponse' status $ T.error status description $ \a b ->
-    mkurl a $ map (second Just) b
+  htmlUrlResponse' status $ T.error status description

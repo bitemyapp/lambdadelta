@@ -39,7 +39,7 @@ data Cry r = Cry
     }
 
 -- |Function to make URLs from some routing type
-type MkUrl r = r -> [(Text, Maybe Text)] -> Text
+type MkUrl r = r -> [(Text, Text)] -> Text
 
 -- |Function which handles a request
 type RequestProcessor r = ReaderT (Cry r) SqlPersistM

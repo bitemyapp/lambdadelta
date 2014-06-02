@@ -223,9 +223,11 @@ runner :: PathInfo r
        -> ConnectionPool                 -- ^ Database connection reference
        -> Application
 runner settings route on500 c@(conf,_) pool = handleWai (fromString webroot) $ \mkurl r ->
-  staticPolicy (addBase fileroot) $
-  gzip (_gzip settings) $
-  process route on500 c pool mkurl r
+  -- This is horrific, come up with a better way of doing it
+  let mkurl' r' args = replace "%23" "#" . mkurl r' $ map (\(a,b) -> (a, if b == "" then Nothing else Just b)) args
+  in staticPolicy (addBase fileroot) $
+     gzip (_gzip settings) $
+     process route on500 c pool mkurl' r
 
   where webroot  = get' conf "server" "web_root"
         fileroot = get' conf "server" "file_root"
@@ -267,10 +269,7 @@ runHandler h conf cfile pool mkurl req = do
                 , _params = map (decodeUtf8 *** decodeUtf8) (ps ++ ps')
                 , _files  = map (first decodeUtf8) fs
                 , _conf   = conf'
-                , _mkurl  = mkurl'
+                , _mkurl  = mkurl
                 }
 
   runPool (runReaderT h cry) pool
-
-  where mkurl' r args = replace "%23" "#" $ mkurl r args
-  -- This is horrific, come up with a better way of doing it

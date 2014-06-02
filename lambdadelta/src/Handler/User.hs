@@ -13,7 +13,8 @@ import Handler.Post (Target(..), newThread, newReply)
 import Network.HTTP.Types.Status (ok200)
 import Routes (Sitemap)
 import Text.Hamlet (HtmlUrl)
-import Web.Seacat (Handler, RequestProcessor, askMkUrl, conf', htmlResponse, redirect)
+import Web.Seacat (Handler, RequestProcessor, conf', redirect)
+import Web.Seacat.RequestHandler (htmlUrlResponse)
 
 import qualified Handler.Templates as T
 import qualified Routes as R
@@ -24,9 +25,7 @@ index :: Handler Sitemap
 index = do
   lst <- listing
 
-  mkurl <- askMkUrl
-  htmlResponse $ T.index lst $ \a b ->
-    mkurl a $ map (second Just) b
+  htmlUrlResponse $ T.index lst
 
 -- |Render a board index page
 -- Todo: Board-specific config
@@ -44,9 +43,7 @@ board board page = withBoard board $ \(Entity boardId board') -> do
   pages    <- numPages boardId
   threads' <- mapM (getThread summary_size) threads
 
-  mkurl <- askMkUrl
-  htmlResponse $ T.board board' boardlisting page pages threads' $ \a b ->
-    mkurl a $ map (second Just) b
+  htmlUrlResponse $ T.board board' boardlisting page pages threads'
 
 thread :: Text -> Int -> Handler Sitemap
 thread board thread = withBoard board $ \(Entity boardId board') ->
@@ -54,9 +51,7 @@ thread board thread = withBoard board $ \(Entity boardId board') ->
     boardlisting <- listing
     thread'' <- getThread (-1) thread'
 
-    mkurl <- askMkUrl
-    htmlResponse $ T.thread board' boardlisting thread'' $ \a b ->
-      mkurl a $ map (second Just) b
+    htmlUrlResponse $ T.thread board' boardlisting thread''
 
 -- |Handle a request to post a new thread
 -- Todo: anti-spam
