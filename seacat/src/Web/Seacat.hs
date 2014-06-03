@@ -43,7 +43,11 @@ module Web.Seacat
     , param'
     , hasParam
     , params
+
+    -- * File upload handling
     , files
+    , save
+    , save'
     ) where
 
 import Web.Seacat.Configuration

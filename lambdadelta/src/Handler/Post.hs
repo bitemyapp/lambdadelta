@@ -26,7 +26,7 @@ import Routes (Sitemap)
 import System.FilePath.Posix (joinPath, takeExtension)
 import Text.Blaze.Html (Html, toHtml, preEscapedToHtml)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
-import Web.Seacat (ConfigParser, FileInfo(..), RequestProcessor, askConf, conf', get', files, param', hasParam)
+import Web.Seacat (ConfigParser, FileInfo(..), RequestProcessor, askConf, conf', get', files, save', param', hasParam)
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
@@ -163,7 +163,7 @@ handleFileUpload :: Board                  -- ^ The board
                  -> FileInfo BL.ByteString -- ^ The file
                  -> Bool                   -- ^ Whether it is spoilered
                  -> RequestProcessor Sitemap FileId
-handleFileUpload board (FileInfo fname _ content) spoiler = do
+handleFileUpload board file@(FileInfo fname _ content) spoiler = do
   thumbnail_width  <- conf' "board" "thumbnail_width"
   thumbnail_height <- conf' "board" "thumbnail_height"
 
@@ -174,9 +174,7 @@ handleFileUpload board (FileInfo fname _ content) spoiler = do
   let size = fromIntegral $ BL.length content
 
   -- Save the file
-  let path = joinPath [fileroot, unpack $ boardName board, "src", fnamehash]
-  liftIO $ BL.writeFile path content
-
+  save' [unpack $ boardName board, "src", fnamehash] file
 
   -- Get its dimensions
   let img = concat $ BL.toChunks content

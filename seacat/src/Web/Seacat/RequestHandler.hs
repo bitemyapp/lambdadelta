@@ -27,13 +27,18 @@ module Web.Seacat.RequestHandler ( htmlResponse
                                  , param'
                                  , hasParam
                                  , params
-                                 , files) where
+                                 , files
+                                 , save
+                                 , save') where
+
+import Prelude hiding (writeFile)
 
 import Blaze.ByteString.Builder (Builder)
 import Blaze.ByteString.Builder.ByteString (fromByteString)
 import Control.Applicative ((<$>))
+import Control.Monad (void)
 import Control.Monad.IO.Class (liftIO)
-import Data.ByteString.Lazy (ByteString)
+import Data.ByteString.Lazy (ByteString, writeFile)
 import Data.Maybe (isJust, fromMaybe)
 import Data.Text (Text, pack)
 import Data.Text.Encoding (encodeUtf8)
@@ -163,3 +168,16 @@ params = _params <$> askCry
 -- |Get all files, stored in memory as a lazy bytestring.
 files :: PathInfo r => RequestProcessor r [(Text, FileInfo ByteString)]
 files = _files <$> askCry
+
+
+-- |Save a file to a location relative to the filesystem root.
+save :: PathInfo r => FilePath -> FileInfo ByteString -> RequestProcessor r ()
+save fname (FileInfo _ _ content) = do
+  fileroot <- conf' "server" "file_root"
+  let path = joinPath [fileroot, fname]
+  void . liftIO $ writeFile path content
+
+-- |Save a file to a location relative to the filesystem root, with
+-- the path given as segments.
+save' :: PathInfo r => [FilePath] -> FileInfo ByteString -> RequestProcessor r ()
+save' = save . joinPath
