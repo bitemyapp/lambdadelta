@@ -36,9 +36,10 @@ import Prelude hiding (writeFile)
 import Blaze.ByteString.Builder (Builder)
 import Blaze.ByteString.Builder.ByteString (fromByteString)
 import Control.Applicative ((<$>))
-import Control.Monad (void)
 import Control.Monad.IO.Class (liftIO)
+import Data.ByteString (unpack)
 import Data.ByteString.Lazy (ByteString, writeFile)
+import Data.Char (chr)
 import Data.Maybe (isJust, fromMaybe)
 import Data.Text (Text, pack)
 import Data.Text.Encoding (encodeUtf8)
@@ -46,7 +47,7 @@ import Network.HTTP.Types.Status (Status, ok200, found302)
 import Network.Mime (defaultMimeLookup)
 import Network.Wai (responseBuilder, responseFile, responseLBS)
 import System.Directory (doesFileExist)
-import System.FilePath.Posix (joinPath)
+import System.FilePath.Posix (joinPath, takeExtension, takeFileName)
 import Text.Blaze.Html (Html)
 import Text.Blaze.Html.Renderer.Utf8 (renderHtmlBuilder)
 import Web.Seacat.Configuration (conf')
@@ -170,14 +171,19 @@ files :: PathInfo r => RequestProcessor r [(Text, FileInfo ByteString)]
 files = _files <$> askCry
 
 
--- |Save a file to a location relative to the filesystem root.
-save :: PathInfo r => FilePath -> FileInfo ByteString -> RequestProcessor r ()
-save fname (FileInfo _ _ content) = do
+-- |Save a file to a location relative to the filesystem root,
+-- returning the name. File extension is preserved.
+save :: PathInfo r => FilePath -> FileInfo ByteString -> RequestProcessor r Text
+save fname (FileInfo name _ content) = do
   fileroot <- conf' "server" "file_root"
+  let ext = takeExtension (map (chr . fromIntegral) $ unpack name)
   let path = joinPath [fileroot, fname]
-  void . liftIO $ writeFile path content
+  liftIO $ writeFile (path ++ ext) content
+
+  return . pack $ takeFileName path
 
 -- |Save a file to a location relative to the filesystem root, with
--- the path given as segments.
-save' :: PathInfo r => [FilePath] -> FileInfo ByteString -> RequestProcessor r ()
+-- the path given as segments, returning the name. File extension is
+-- preserved.
+save' :: PathInfo r => [FilePath] -> FileInfo ByteString -> RequestProcessor r Text
 save' = save . joinPath

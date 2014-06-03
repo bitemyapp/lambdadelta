@@ -23,7 +23,7 @@ import Database.Persist
 import Graphics.ImageMagick.MagickWand
 import Handler.Admin (bump, deleteThread)
 import Routes (Sitemap)
-import System.FilePath.Posix (joinPath, takeExtension)
+import System.FilePath.Posix (joinPath)
 import Text.Blaze.Html (Html, toHtml, preEscapedToHtml)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Web.Seacat (ConfigParser, FileInfo(..), RequestProcessor, askConf, conf', get', files, save', param', hasParam)
@@ -170,7 +170,7 @@ handleFileUpload board file@(FileInfo fname _ content) spoiler = do
   -- Construct the target file path
   fileroot <- conf' "server" "file_root"
   let fname' = map (chr . fromIntegral) $ B.unpack fname
-  let fnamehash = md5s (Str fname') ++ takeExtension fname'
+  let fnamehash = md5s $ Str fname'
   let size = fromIntegral $ BL.length content
 
   -- Save the file
