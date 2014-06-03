@@ -176,11 +176,13 @@ files = _files <$> askCry
 save :: PathInfo r => FilePath -> FileInfo ByteString -> RequestProcessor r Text
 save fname (FileInfo name _ content) = do
   fileroot <- conf' "server" "file_root"
-  let ext = takeExtension (map (chr . fromIntegral) $ unpack name)
-  let path = joinPath [fileroot, fname]
-  liftIO $ writeFile (path ++ ext) content
+  let ext    = takeExtension (map (chr . fromIntegral) $ unpack name)
+  let path   = joinPath [fileroot, fname]
+  let fname' = path ++ ext
 
-  return . pack $ takeFileName path
+  liftIO $ writeFile fname' content
+
+  return . pack $ takeFileName fname'
 
 -- |Save a file to a location relative to the filesystem root, with
 -- the path given as segments, returning the name. File extension is
