@@ -75,7 +75,10 @@ defaults = forceEither . readstring emptyCP $ unlines
   , "pool_size         = 10"
   ]
 
--- |Apply the supplied configuration to the standard configuration.
+-- |Apply the supplied configuration to the standard
+-- configuration. This overrides the values in the original
+-- configuration with the ones in the user configuration, if provided,
+-- preserving any missing values.
 applyUserConfig :: ConfigParser       -- ^ The standard configuration
                 -> Maybe ConfigParser -- ^ Optional application-specific configuration
                 -> ConfigParser
@@ -91,9 +94,9 @@ get' cp ss os = forceEither $ get cp ss os
 -- using Seacat that my handlers all started with a block of the form,
 --
 -- > cfg <- askConf
--- > foo = get cfg "section" "foo"
--- > bar = get cfg "section" "bar"
--- > baz = get cfg "section" "baz"
+-- > let foo = get cfg "section" "foo"
+-- > let bar = get cfg "section" "bar"
+-- > let baz = get cfg "section" "baz"
 --
 -- This simplifies that by getting rid of the need to use `askConf`
 -- manually.

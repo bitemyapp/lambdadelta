@@ -81,7 +81,7 @@ isRateLimited tag = do
 --------------------
 
 -- |Check if someone is banned, and send them to the error handler if
--- not.
+-- so.
 ipBan :: PathInfo r
       => Tag
       -> (UTCTime -> Text -> Handler r)

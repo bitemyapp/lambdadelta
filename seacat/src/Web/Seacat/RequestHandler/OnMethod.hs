@@ -24,7 +24,7 @@ onGet :: PathInfo r
       -> Handler r
 onGet = on GET
 
--- |Run the provided handler on a Post request
+-- |Run the provided handler on a POST request
 onPost :: PathInfo r
        => Handler r -- ^ The error handler
        -> Handler r -- ^ The handler

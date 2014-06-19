@@ -6,7 +6,8 @@
 --
 -- In addition to response building, there are helper functions for
 -- accessing the request parameters.
-module Web.Seacat.RequestHandler ( htmlResponse
+module Web.Seacat.RequestHandler ( -- * Response builders
+                                   htmlResponse
                                  , htmlResponse'
 
                                  , htmlUrlResponse
@@ -21,12 +22,16 @@ module Web.Seacat.RequestHandler ( htmlResponse
                                  , respond
                                  , respondFile
 
+                                 -- * Redirection
                                  , redirect
 
+                                 -- * Parameter accessors
                                  , param
                                  , param'
                                  , hasParam
                                  , params
+
+                                 -- * File upload handling
                                  , files
                                  , save
                                  , save') where
@@ -53,25 +58,23 @@ import Text.Blaze.Html.Renderer.Utf8 (renderHtmlBuilder)
 import Web.Seacat.Configuration (conf')
 import Web.Seacat.RequestHandler.Types
 
--- |Produce a 200 OK response from the given HTML. This calls
--- `htmlResponse'`.
+-- |Produce a 200 OK response from the given HTML.
 htmlResponse :: PathInfo r => Html -> Handler r
 htmlResponse = htmlResponse' ok200
 
--- |Produce a response from the given HTML and response code. This
--- calls `respond`.
+-- |Produce a response from the given HTML and response code.
 htmlResponse' :: PathInfo r => Status -> Html -> Handler r
 htmlResponse' status html = respond status $ renderHtmlBuilder html
 
 -------------------------
 
 -- |Produce a 200 OK response from the given HTML-generating
--- function. This calls `htmlUrlResponse'`.
+-- function.
 htmlUrlResponse :: PathInfo r => (MkUrl r -> Html) -> Handler r
 htmlUrlResponse = htmlUrlResponse' ok200
 
 -- |Produce a response from the given HTML-generating function and
--- response code. This calls `respond`.
+-- response code.
 htmlUrlResponse' :: PathInfo r => Status -> (MkUrl r -> Html) -> Handler r
 htmlUrlResponse' status html = do
   mkurl <- askMkUrl
@@ -80,25 +83,24 @@ htmlUrlResponse' status html = do
 
 -------------------------
 
--- |Produce a 200 OK response from the given UTF-8 text. This calls
--- `textResponse'`.
+-- |Produce a 200 OK response from the given UTF-8 text.
 textResponse :: PathInfo r => Text -> Handler r
 textResponse = textResponse' ok200
 
 -- |Produce a response from the given UTF-8 text and response
--- code. This calls `respond`.
+-- code.
 textResponse' :: PathInfo r => Status -> Text -> Handler r
 textResponse' status = respond status . fromByteString . encodeUtf8
 
 -------------------------
 
 -- |Produce a 200 OK response from the given UTF-8 text-generating
--- function. This calls `textUrlResponse'`.
+-- function.
 textUrlResponse :: PathInfo r => (MkUrl r -> Text) -> Handler r
 textUrlResponse = textUrlResponse' ok200
 
 -- |Produce a response from the given UTF-8 text-generating function
--- and response code. This calls `respond`.
+-- and response code.
 textUrlResponse' :: PathInfo r => Status -> (MkUrl r -> Text) -> Handler r
 textUrlResponse' status text = do
   mkurl <- askMkUrl
@@ -106,7 +108,8 @@ textUrlResponse' status text = do
 
 -------------------------
 
--- |Produce a response from the given status and ByteString builder.
+-- |Produce a response from the given status and ByteString
+-- builder. This sets a content-type of UTF-8 HTML.
 respond :: PathInfo r => Status -> Builder -> Handler r
 respond status = return . responseBuilder status [("Content-Type", "text/html; charset=utf-8")]
 
@@ -166,10 +169,11 @@ hasParam p = isJust <$> lookup p <$> params
 params :: PathInfo r => RequestProcessor r [(Text, Text)]
 params = _params <$> askCry
 
+-------------------------
+
 -- |Get all files, stored in memory as a lazy bytestring.
 files :: PathInfo r => RequestProcessor r [(Text, FileInfo ByteString)]
 files = _files <$> askCry
-
 
 -- |Save a file to a location relative to the filesystem root,
 -- returning the name. File extension is preserved.

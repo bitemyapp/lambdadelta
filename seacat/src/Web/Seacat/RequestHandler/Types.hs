@@ -21,15 +21,12 @@ data Cry r = Cry
     -- ^ The underlying WAI request.
 
     , _params :: [(Text, Text)]
-    -- ^ The parameters, parsed once before the top-level
-    -- handler is called. This is because you can't query
-    -- the parameters of a `Request` multiple times, as
-    -- it's implemented as an IO Conduit source.
+    -- ^ The parameters, parsed once before the top-level handler is
+    -- called.
 
     , _files  :: [(Text, FileInfo ByteString)]
-    -- ^ The files, stored in memory as lazy bytestrings,
-    -- and parsed out of the request once for the same
-    -- reasoning as _params.
+    -- ^ The files, stored in memory as lazy bytestrings, and parsed
+    -- out of the request once at the beginning.
 
     , _conf :: ConfigParser
     -- ^ The contents of the configuration file

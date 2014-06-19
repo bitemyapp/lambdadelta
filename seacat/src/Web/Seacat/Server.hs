@@ -60,12 +60,12 @@ data SeacatSettings = SeacatSettings
       -- ^ Database clean handler. This is optional.
 
     , _gzip :: GzipSettings
-      -- ^ The settings to use for Gzip compression. Default is to
-      -- compress if allowed.
+      -- ^ The settings to use for Gzip compression.
     }
 
 -- |Default configuration: no application-specific configuration, no
--- migration handler, and no population handler.
+-- migration handler, no population handler, and gzip if the browser
+-- accepts it.
 defaultSettings :: SeacatSettings
 defaultSettings = SeacatSettings { _config   = Nothing
                                  , _migrate  = Nothing
