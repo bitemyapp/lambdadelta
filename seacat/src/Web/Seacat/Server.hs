@@ -26,11 +26,11 @@ import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.IO.Error (catchIOError)
 import Web.Routes.PathInfo (PathInfo)
-import Web.Routes.Wai (handleWai)
 
 import Web.Seacat.Configuration (ConfigParser, applyUserConfig, defaults, get', loadConfigFile, reloadConfigFile)
 import Web.Seacat.Database
 import Web.Seacat.RequestHandler.Types (Cry(..), MkUrl, Handler, _req, _params, _files)
+import Web.Seacat.Router (handleWai)
 
 import qualified Network.Wai.Handler.Warp as W
 
@@ -242,10 +242,10 @@ process :: PathInfo r
         -> MkUrl r                     -- ^ URL building function
         -> r                           -- ^ Requested route
         -> Application
-process route on500 (conf,cfile) pool mkurl path req = requestHandler `catchIOError` runError
+process route on500 (conf,cfile) pool mkurl path req receiver = requestHandler `catchIOError` runError
   where requestHandler = runHandler' $ route method path
         runError err   = runHandler' $ on500 (show err)
-        runHandler' h  = runHandler h conf cfile pool mkurl req
+        runHandler' h  = runHandler h conf cfile pool mkurl req receiver 
         method         = forceEither . parseMethod . requestMethod $ req
 
 -- |Run a request handler.
@@ -256,7 +256,7 @@ runHandler :: PathInfo r
            -> ConnectionPool
            -> MkUrl r
            -> Application
-runHandler h conf cfile pool mkurl req = do
+runHandler h conf cfile pool mkurl req receiver = do
   -- Reload the config
   conf' <- case cfile of
             Just cf -> reloadConfigFile conf cf
@@ -272,4 +272,4 @@ runHandler h conf cfile pool mkurl req = do
                 , _mkurl  = mkurl
                 }
 
-  runPool (runReaderT h cry) pool
+  runPool (runReaderT h cry) pool >>= receiver

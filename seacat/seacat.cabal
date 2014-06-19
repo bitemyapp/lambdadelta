@@ -61,6 +61,7 @@ library
   other-modules:       Web.Seacat.Database
                      , Web.Seacat.Server
                      , Web.Seacat.RequestHandler.Types
+                     , Web.Seacat.Router
   
   ghc-options: -Wall  
 
@@ -89,12 +90,11 @@ library
                      , text >=1.1 && <1.2
                      , time >=1.4 && <1.5
                      , transformers >=0.3 && <0.5
-                     , wai >=2.1 && <2.2
-                     , wai-extra >=2.1 && <2.2
-                     , wai-middleware-static >=0.5 && <0.6
-                     , warp >=2.1 && <2.2
+                     , wai >=3.0 && <3.1
+                     , wai-extra >=3.0 && <3.1
+                     , wai-middleware-static >=0.6 && <0.7
+                     , warp >=3.0 && <3.1
                      , web-routes >=0.27 && <0.28
-                     , web-routes-wai >=0.23 && <0.24
 
   -- Directories containing source files.
   hs-source-dirs:      src
