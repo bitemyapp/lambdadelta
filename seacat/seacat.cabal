@@ -10,19 +10,26 @@ name:                seacat
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.1.0.0
+version:             1.0.0.0
 
 -- A short (one-line) description of the package.
 synopsis:            Small web framework using Warp and WAI
 
 -- A longer description of the package.
--- description:         
+description:
+  A small Haskell web framework using Warp and WAI that tries to get
+  out of your way and let you do what you want, but also providing
+  more advanced features like rate limiting and flood protection.
+  .
+  [WAI] <http://hackage.haskell.org/package/wai>
+  .
+  [Warp] <http://hackage.haskell.org/package/warp>
 
 -- URL for the project homepage or repository.
 homepage:            https://github.com/Barrucadu/lambdadelta
 
 -- The license under which the package is released.
-license:             WTFPL
+license:             OtherLicense
 
 -- The file containing the license text.
 license-file:        ../LICENSE

@@ -150,7 +150,9 @@ runserver route on500 cfile pool settings = do
 
   let settings' = setHost (fromString host) . setPort port $ W.defaultSettings
 
-  putStrLn $ "Starting Seacat on " ++ host ++ ":" ++ show port
+  putStrLn $ unlines [ " _ _  _. _ _._|_ "
+                     , "_>(/_(_|(_(_| |_ "]
+  putStrLn $ "Listening on " ++ host ++ ":" ++ show port
   pool $ runSettings settings' . runner settings route on500 (conf,cfile)
 
 -- |Migrate the database
