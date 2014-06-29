@@ -26,11 +26,11 @@ import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.IO.Error (catchIOError)
 import Web.Routes.PathInfo (PathInfo)
+import Web.Routes.Wai (handleWai)
 
 import Web.Seacat.Configuration (ConfigParser, applyUserConfig, defaults, get', loadConfigFile, reloadConfigFile)
 import Web.Seacat.Database
 import Web.Seacat.RequestHandler.Types (Cry(..), MkUrl, Handler, _req, _params, _files)
-import Web.Seacat.Router (handleWai)
 
 import qualified Network.Wai.Handler.Warp as W
 

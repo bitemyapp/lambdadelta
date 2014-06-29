@@ -10,7 +10,7 @@ name:                seacat
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             1.0.0.0
+version:             1.0.0.1
 
 -- A short (one-line) description of the package.
 synopsis:            Small web framework using Warp and WAI
@@ -68,7 +68,6 @@ library
   other-modules:       Web.Seacat.Database
                      , Web.Seacat.Server
                      , Web.Seacat.RequestHandler.Types
-                     , Web.Seacat.Router
   
   ghc-options: -Wall  
 
@@ -102,6 +101,7 @@ library
                      , wai-middleware-static >=0.6 && <0.7
                      , warp >=3.0 && <3.1
                      , web-routes >=0.27 && <0.28
+                     , web-routes-wai >= 0.24 && <0.25
 
   -- Directories containing source files.
   hs-source-dirs:      src
