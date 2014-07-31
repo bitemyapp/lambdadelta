@@ -10,7 +10,7 @@ name:                seacat
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             1.0.0.1
+version:             1.0.0.2
 
 -- A short (one-line) description of the package.
 synopsis:            Small web framework using Warp and WAI
@@ -32,7 +32,7 @@ homepage:            https://github.com/Barrucadu/lambdadelta
 license:             OtherLicense
 
 -- The file containing the license text.
-license-file:        ../LICENSE
+license-file:        LICENSE
 
 -- The package author(s).
 author:              Michael Walker
